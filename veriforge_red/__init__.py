@@ -6,12 +6,20 @@ Built on the VeriForge hardened security foundation. 100% local — zero cloud.
 """
 
 __version__ = "1.0.0"
+
+from .core.engine import RedEngine
+from .core.updater import Updater, UpdateInfo, UpdateResult, UpdateStatus, VulnDBInfo
+from .core.vulndb_loader import VulnDBLoader, VulnSignature, PayloadSignature, CVEMapping
+
 __all__ = [
+    "CVEMapping",
+    "PayloadSignature",
     "RedEngine",
-    "Scanner",
-    "PrivacyAuditor",
-    "ThreatDetector",
-    "QuarantineManager",
-    "RemediationEngine",
-    "Vault",
+    "UpdateInfo",
+    "UpdateResult",
+    "Updater",
+    "UpdateStatus",
+    "VulnDBInfo",
+    "VulnDBLoader",
+    "VulnSignature",
 ]

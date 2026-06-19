@@ -108,7 +108,7 @@ def _mock_kivy():
 # Install mocks before importing our modules
 _kivy = _mock_kivy()
 
-from veriforge_red.core import RedEngine, PrivacyReport
+from veriforge_red.core import RedEngine
 from veriforge_red.mobile.android_privacy import (
     AndroidPrivacyAuditor,
     Category,

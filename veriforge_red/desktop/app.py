@@ -205,6 +205,7 @@ class RedApp:
         self._build_threats_tab()
         self._build_vault_tab()
         self._build_quarantine_tab()
+        self._build_updates_tab()
         self._build_settings_tab()
 
     def _new_tab(self, name: str) -> tk.Frame:
@@ -772,7 +773,232 @@ class RedApp:
                     self._vars[k].set(v)
             messagebox.showinfo("Settings", "Config imported successfully.")
 
-    # ── UI Poller ───────────────────────────────────────────────────────────
+    # ── Updates ────────────────────────────────────────────────────────────
+
+    def _build_updates_tab(self) -> None:
+        """Build the Updates tab — app, vulndb, and rules updates."""
+        tab = self._new_tab("Updates")
+        tab.grid_columnconfigure(0, weight=1)
+
+        # -- Header --
+        header = tk.Frame(tab, bg=COLORS["dark_bg"])
+        header.pack(fill="x", padx=16, pady=(16, 8))
+        tk.Label(header, text="Updates", font=("Inter", 20, "bold"),
+                 bg=COLORS["dark_bg"], fg="white").pack(anchor="w")
+        tk.Label(header, text="Check and install updates. All downloads are cryptographically verified.",
+                 font=("Inter", 10), bg=COLORS["dark_bg"], fg=COLORS["muted"]).pack(anchor="w")
+
+        # -- Current Versions Card --
+        ver_card = self._card(tab, title="Current Versions")
+        ver_card.pack(fill="x", padx=16, pady=8)
+
+        self._update_version_labels = {}
+        versions = [
+            ("App Version", "app_version", "1.0.0"),
+            ("VulnDB Version", "vulndb_version", "Checking..."),
+            ("Rules Version", "rules_version", "Checking..."),
+            ("Last Check", "last_check", "Never"),
+        ]
+        for i, (label, key, default) in enumerate(versions):
+            row = tk.Frame(ver_card, bg=COLORS["card_bg"])
+            row.pack(fill="x", pady=2)
+            tk.Label(row, text=f"{label}:", font=("Inter", 10),
+                     bg=COLORS["card_bg"], fg=COLORS["muted"], width=18, anchor="w").pack(side="left")
+            lbl = tk.Label(row, text=default, font=("Inter", 10, "bold"),
+                           bg=COLORS["card_bg"], fg="white")
+            lbl.pack(side="left")
+            self._update_version_labels[key] = lbl
+
+        # -- App Update Card --
+        app_card = self._card(tab, title="Application Update")
+        app_card.pack(fill="x", padx=16, pady=8)
+
+        self._app_update_status = tk.Label(app_card, text="Click 'Check for Updates' to search",
+                                           font=("Inter", 10), bg=COLORS["card_bg"], fg=COLORS["muted"])
+        self._app_update_status.pack(anchor="w", pady=(4, 8))
+
+        self._app_update_btn = tk.Button(app_card, text="Check for Updates",
+                                         font=("Inter", 10, "bold"), bg=COLORS["primary"], fg="white",
+                                         activebackground=COLORS["accent"], bd=0, cursor="hand2",
+                                         padx=20, pady=6, command=self._on_check_app_update)
+        self._app_update_btn.pack(anchor="w")
+
+        # -- VulnDB Update Card --
+        vuln_card = self._card(tab, title="Vulnerability Database")
+        vuln_card.pack(fill="x", padx=16, pady=8)
+
+        self._vulndb_status = tk.Label(vuln_card, text="Click 'Check' to search for database updates",
+                                       font=("Inter", 10), bg=COLORS["card_bg"], fg=COLORS["muted"])
+        self._vulndb_status.pack(anchor="w", pady=(4, 8))
+
+        btn_frame = tk.Frame(vuln_card, bg=COLORS["card_bg"])
+        btn_frame.pack(anchor="w")
+        self._vulndb_check_btn = tk.Button(btn_frame, text="Check for Updates",
+                                           font=("Inter", 10, "bold"), bg=COLORS["primary"], fg="white",
+                                           activebackground=COLORS["accent"], bd=0, cursor="hand2",
+                                           padx=20, pady=6, command=self._on_check_vulndb)
+        self._vulndb_check_btn.pack(side="left", padx=(0, 8))
+        self._vulndb_stats_btn = tk.Button(btn_frame, text="View Stats",
+                                           font=("Inter", 10), bg=COLORS["card_bg"], fg=COLORS["muted"],
+                                           activebackground=COLORS["dark_bg"], bd=0, cursor="hand2",
+                                           padx=16, pady=6, command=self._on_vulndb_stats)
+        self._vulndb_stats_btn.pack(side="left")
+
+        # -- Progress bar (hidden initially) --
+        self._update_progress = tk.Frame(tab, bg=COLORS["dark_bg"])
+        self._update_progress.pack(fill="x", padx=16, pady=8)
+        self._update_progress.pack_forget()
+
+        prog_inner = tk.Frame(self._update_progress, bg=COLORS["card_bg"], height=20)
+        prog_inner.pack(fill="x")
+        self._update_progress_bar = tk.Frame(prog_inner, bg=COLORS["primary"], width=0, height=20)
+        self._update_progress_bar.place(x=0, y=0)
+        self._update_progress_label = tk.Label(self._update_progress, text="",
+                                               font=("Inter", 9), bg=COLORS["dark_bg"], fg=COLORS["muted"])
+        self._update_progress_label.pack(anchor="w")
+
+        # -- Offline Update Card --
+        offline_card = self._card(tab, title="Offline Update (Air-Gapped)")
+        offline_card.pack(fill="x", padx=16, pady=8)
+
+        tk.Label(offline_card, text="For air-gapped environments: import update packages from file.",
+                 font=("Inter", 10), bg=COLORS["card_bg"], fg=COLORS["muted"]).pack(anchor="w", pady=(4, 8))
+        tk.Button(offline_card, text="Import Update Package",
+                  font=("Inter", 10), bg=COLORS["card_bg"], fg=COLORS["muted"],
+                  activebackground=COLORS["dark_bg"], bd=0, cursor="hand2",
+                  padx=16, pady=6, command=self._on_import_offline_update).pack(anchor="w")
+
+    def _on_check_app_update(self):
+        """Check for application updates."""
+        self._app_update_btn.config(state="disabled", text="Checking...")
+        self._app_update_status.config(text="Contacting update server...", fg=COLORS["accent"])
+        self.root.after(100, self._do_check_app_update)
+
+    def _do_check_app_update(self):
+        """Background check for app updates."""
+        try:
+            status = self.engine.check_for_updates()
+            if status["app_update_available"]:
+                new_ver = status["app_update_version"]
+                self._app_update_status.config(
+                    text=f"Update available: v{new_ver}. Click Download to install.",
+                    fg="#4caf50")
+                self._app_update_btn.config(text="Download Update", state="normal",
+                                           command=lambda: self._on_download_app_update(new_ver))
+            else:
+                self._app_update_status.config(
+                    text=f"You are on the latest version (v{status['app_version']}).",
+                    fg=COLORS["muted"])
+                self._app_update_btn.config(text="Check for Updates", state="normal")
+            # Update version labels
+            self._update_version_labels["app_version"].config(text=status["app_version"])
+            self._update_version_labels["vulndb_version"].config(text=status["vulndb_version"])
+            self._update_version_labels["rules_version"].config(text=status["rules_version"])
+            self._update_version_labels["last_check"].config(text=status["last_check"] or "Just now")
+        except Exception as e:
+            self._app_update_status.config(text=f"Update check failed: {e}", fg=COLORS["danger"])
+            self._app_update_btn.config(text="Check for Updates", state="normal")
+
+    def _on_download_app_update(self, version: str):
+        """Download the application update."""
+        self._app_update_btn.config(state="disabled", text="Downloading...")
+        self._app_update_status.config(text=f"Downloading v{version}...", fg=COLORS["accent"])
+        self._update_progress.pack(fill="x", padx=16, pady=8)
+
+        def progress(done, total):
+            pct = int(done / total * 100) if total else 0
+            self._update_progress_bar.config(width=int(400 * pct / 100))
+            self._update_progress_label.config(text=f"{pct}% ({done // 1024} KB)")
+
+        def do_download():
+            try:
+                result = self.engine.download_app_update(progress)
+                self.root.after(0, lambda: self._on_download_complete(result, version))
+            except Exception as e:
+                self.root.after(0, lambda: self._on_download_complete(
+                    {"success": False, "message": str(e)}, version))
+
+        import threading
+        threading.Thread(target=do_download, daemon=True).start()
+
+    def _on_download_complete(self, result: dict, version: str):
+        """Handle download completion."""
+        self._update_progress.pack_forget()
+        if result["success"]:
+            msg = result.get("message", f"Update v{version} downloaded.")
+            if result.get("restart_required"):
+                msg += " Restart required to apply."
+            self._app_update_status.config(text=msg, fg="#4caf50")
+            self._app_update_btn.config(text="Restart to Apply", state="normal",
+                                       command=self._on_restart_for_update)
+        else:
+            self._app_update_status.config(text=result.get("message", "Download failed."),
+                                           fg=COLORS["danger"])
+            self._app_update_btn.config(text="Retry Download", state="normal",
+                                       command=lambda: self._on_download_app_update(version))
+
+    def _on_restart_for_update(self):
+        """Restart the application to apply the update."""
+        from tkinter import messagebox
+        if messagebox.askyesno("Restart Required", "Restart VeriForge Red to apply the update?"):
+            import sys
+            import os
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    def _on_check_vulndb(self):
+        """Check for VulnDB updates."""
+        self._vulndb_check_btn.config(state="disabled", text="Checking...")
+        self._vulndb_status.config(text="Checking vulnerability database...", fg=COLORS["accent"])
+
+        def do_check():
+            try:
+                result = self.engine.download_vulndb_update()
+                self.root.after(0, lambda: self._on_vulndb_complete(result))
+            except Exception as e:
+                self.root.after(0, lambda: self._on_vulndb_complete(
+                    {"success": False, "message": str(e)}))
+
+        import threading
+        threading.Thread(target=do_check, daemon=True).start()
+
+    def _on_vulndb_complete(self, result: dict):
+        """Handle VulnDB update completion."""
+        self._vulndb_check_btn.config(state="normal", text="Check for Updates")
+        if result["success"]:
+            self._vulndb_status.config(text=result.get("message", "VulnDB updated."), fg="#4caf50")
+        else:
+            self._vulndb_status.config(text=result.get("message", "No update available or check failed."),
+                                       fg=COLORS["muted"])
+
+    def _on_vulndb_stats(self):
+        """Show VulnDB statistics."""
+        stats = self.engine.get_vulndb_stats()
+        msg = (f"VulnDB Version: {stats['version']}\n"
+               f"Signatures: {stats['signature_count']}\n"
+               f"Payloads: {stats['payload_count']}\n"
+               f"Critical: {stats['critical_count']}\n"
+               f"High: {stats['high_count']}\n"
+               f"Categories: {', '.join(stats['categories'])}")
+        from tkinter import messagebox
+        messagebox.showinfo("Vulnerability Database Statistics", msg)
+
+    def _on_import_offline_update(self):
+        """Import an offline update package."""
+        path = filedialog.askopenfilename(
+            title="Select Update Package",
+            filetypes=[("All Update Files", "*.zip *.sqlite *.json *.gz"),
+                       ("App Update", "*.zip"), ("VulnDB Update", "*.sqlite *.gz"),
+                       ("Rules Update", "*.json")],
+        )
+        if path:
+            result = self.engine.import_offline_update(path)
+            from tkinter import messagebox
+            if result["success"]:
+                messagebox.showinfo("Import Successful", result["message"])
+            else:
+                messagebox.showerror("Import Failed", result["message"])
+
+    # ── UI Poller ─────────────────────────────────────────────────────────
 
     def _start_ui_poller(self):
         self._poll_ui()

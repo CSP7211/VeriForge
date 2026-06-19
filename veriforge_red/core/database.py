@@ -1,12 +1,13 @@
 """SQLite database for local storage — thread-safe with locking.
 
-Six tables manage the full lifecycle of security data:
+Seven tables manage the full lifecycle of security data:
 - scans          : scan history
 - threats        : detected threats
 - quarantine     : quarantined items
 - privacy_issues : privacy audit results
 - vault_items    : vault entries
 - remediation_log: auto-fix history
+- update_log     : update history (app, vulndb, rules)
 """
 
 from __future__ import annotations
@@ -88,6 +89,16 @@ CREATE TABLE IF NOT EXISTS remediation_log (
     action_taken TEXT    NOT NULL,
     success      INTEGER NOT NULL DEFAULT 0,
     timestamp    TEXT    NOT NULL
+);
+
+-- Update history (app, vulndb, rules)
+CREATE TABLE IF NOT EXISTS update_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    component    TEXT    NOT NULL,  -- 'app' | 'vulndb' | 'rules'
+    version      TEXT    NOT NULL,
+    applied_at   TEXT    NOT NULL,
+    success      INTEGER NOT NULL DEFAULT 1,
+    error_msg    TEXT
 );
 """
 

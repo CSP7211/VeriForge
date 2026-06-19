@@ -6,13 +6,15 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from .database import Database
-from .scanner import Scanner
-from .privacy import PrivacyAuditor, WindowsPrivacyAuditor, AndroidPrivacyAuditor
-from .threat_detector import ThreatDetector
+from .monitor import Monitor
+from .privacy import AndroidPrivacyAuditor, PrivacyAuditor, WindowsPrivacyAuditor
 from .quarantine import QuarantineManager
 from .remediation import RemediationEngine
+from .scanner import Scanner
+from .threat_detector import ThreatDetector
+from .updater import Updater
 from .vault import Vault
-from .monitor import Monitor
+from .vulndb_loader import VulnDBLoader
 
 
 class RedEngine:
@@ -49,6 +51,10 @@ class RedEngine:
             self.quarantine, self.remediation, self.db,
             intervals=cfg.get("monitor_intervals"),
         )
+
+        # Update system and vulnerability database
+        self.updater = Updater(self.db)
+        self.vulndb = VulnDBLoader()
 
     # -- core operations --------------------------------------------------
 
@@ -264,3 +270,54 @@ class RedEngine:
                 pass
         counts = Counter(dates)
         return [{"date": d, "count": c} for d, c in sorted(counts.items())]
+
+    # -- update system -----------------------------------------------------
+
+    def check_for_updates(self, channel: str = "stable") -> dict:
+        """Check for all available updates (app, vulndb, rules).
+
+        Returns a dict with update status for the UI.
+        """
+        status = self.updater.get_full_status(channel)
+        return {
+            "app_version": status.app_version,
+            "vulndb_version": status.vulndb_version,
+            "rules_version": status.rules_version,
+            "last_check": status.last_check,
+            "app_update_available": status.app_update_available is not None,
+            "app_update_version": status.app_update_available.version if status.app_update_available else None,
+            "vulndb_update_available": status.vulndb_update_available is not None,
+            "vulndb_update_version": status.vulndb_update_available.version if status.vulndb_update_available else None,
+            "rules_update_available": status.rules_update_available is not None,
+            "update_channel": status.update_channel,
+        }
+
+    def download_app_update(self, progress_callback=None):
+        """Download the latest application update."""
+        update_info = self.updater.check_app_update()
+        if not update_info:
+            return {"success": False, "message": "No application update available."}
+        result = self.updater.download_app_update(update_info, progress_callback)
+        return {"success": result.success, "message": result.message, "restart_required": result.restart_required}
+
+    def download_vulndb_update(self, progress_callback=None):
+        """Download the latest vulnerability database update."""
+        vulndb_info = self.updater.check_vulndb_update()
+        if not vulndb_info:
+            return {"success": False, "message": "No vulnerability database update available."}
+        result = self.updater.download_vulndb_update(vulndb_info, progress_callback)
+        if result.success:
+            # Reload the vuln DB
+            self.vulndb = VulnDBLoader()
+        return {"success": result.success, "message": result.message}
+
+    def import_offline_update(self, package_path: str):
+        """Import an update package from a file (for air-gapped environments)."""
+        result = self.updater.import_offline_update(Path(package_path))
+        if result.success and "vulndb" in result.action_taken:
+            self.vulndb = VulnDBLoader()
+        return {"success": result.success, "message": result.message}
+
+    def get_vulndb_stats(self) -> dict:
+        """Get statistics about the loaded vulnerability database."""
+        return self.vulndb.get_stats()
