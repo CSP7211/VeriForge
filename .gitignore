@@ -1,15 +1,76 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
-dist/
 build/
-.buildozer/
-.buildozer_cache/
-bin/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+!VeriForgeRed.spec
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# VeriForge Red runtime data
+.veriforge_red/
+!veriforge_red/
+*.sqlite
+*.sqlite-journal
+
+# Build outputs
+*.exe
 *.apk
-*.aab
-*.keystore
-*.jks
+*.apk-
+*.msi
+*.dmg
+*.deb
+*.rpm
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
