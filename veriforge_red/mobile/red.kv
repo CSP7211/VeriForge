@@ -1,0 +1,1211 @@
+#:kivy 2.1.0
+#:import platform kivy.utils.platform
+#:import dp kivy.metrics.dp
+#:import FadeTransition kivy.uix.screenmanager.FadeTransition
+#:import ScrollView kivy.uix.scrollview.ScrollView
+#:import RecycleView kivy.uix.recycleview.RecycleView
+
+# ---------------------------------------------------------------------------
+# Color Palette
+# ---------------------------------------------------------------------------
+#:set PRIMARY   '#c62828'
+#:set BG        '#1a1a2e'
+#:set CARD      '#16213e'
+#:set ACCENT    '#e94560'
+#:set TEXT      '#eaeaea'
+#:set TEXT_SEC  '#a0a0b0'
+#:set SUCCESS   '#4caf50'
+#:set WARNING   '#ff9800'
+#:set DANGER    '#f44336'
+
+# ---------------------------------------------------------------------------
+# Styles
+# ---------------------------------------------------------------------------
+
+<RedButton@Button>:
+    background_normal: ''
+    background_color: (0.776, 0.157, 0.157, 1)
+    color: (0.918, 0.918, 0.918, 1)
+    font_size: dp(16)
+    bold: True
+    size_hint_y: None
+    height: dp(48)
+    border_radius: [dp(8),]
+
+<RedButtonAccent@Button>:
+    background_normal: ''
+    background_color: (0.914, 0.271, 0.376, 1)
+    color: (1, 1, 1, 1)
+    font_size: dp(14)
+    bold: True
+    size_hint_y: None
+    height: dp(40)
+
+<Card@BoxLayout>:
+    orientation: 'vertical'
+    padding: dp(12)
+    spacing: dp(8)
+    size_hint_y: None
+    height: self.minimum_height
+    canvas.before:
+        Color:
+            rgba: 0.086, 0.129, 0.243, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(12),]
+
+<SectionLabel@Label>:
+    color: (0.63, 0.63, 0.69, 1)
+    font_size: dp(12)
+    bold: True
+    size_hint_y: None
+    height: dp(24)
+    text_size: self.size
+    halign: 'left'
+    valign: 'bottom'
+
+<NavButton@ToggleButton>:
+    group: 'nav'
+    background_normal: ''
+    background_down: ''
+    background_color: (0, 0, 0, 0)
+    color: (0.5, 0.5, 0.6, 1)
+    size_hint_x: 1
+    font_size: dp(10)
+
+<TabButton@ToggleButton>:
+    group: 'tabs'
+    background_normal: ''
+    background_down: ''
+    background_color: (0, 0, 0, 0)
+    color: (0.5, 0.5, 0.6, 1)
+    font_size: dp(12)
+    bold: True
+
+# ---------------------------------------------------------------------------
+# Dashboard Screen
+# ---------------------------------------------------------------------------
+
+<DashboardScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 0.102, 0.102, 0.180, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: 0.086, 0.129, 0.243, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Label:
+                text: 'VeriForge Red'
+                color: (0.918, 0.918, 0.918, 1)
+                font_size: dp(20)
+                bold: True
+                text_size: self.size
+                halign: 'left'
+                valign: 'center'
+            Button:
+                text: 'S'
+                background_normal: ''
+                background_color: (0.776, 0.157, 0.157, 1)
+                color: (1, 1, 1, 1)
+                font_size: dp(14)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(36), dp(36))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'settings'
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(16)
+                spacing: dp(16)
+
+                # Section: Scores
+                SectionLabel:
+                    text: 'SECURITY OVERVIEW'
+
+                GridLayout:
+                    cols: 2
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: dp(160)
+
+                    Card:
+                        padding: dp(12)
+                        spacing: dp(8)
+                        BoxLayout:
+                            orientation: 'vertical'
+                            spacing: dp(4)
+                            Label:
+                                text: 'Security'
+                                color: TEXT_SEC
+                                font_size: dp(12)
+                                bold: True
+                                size_hint_y: None
+                                height: dp(20)
+                            Label:
+                                text: str(root.security_score)
+                                color: (0.918, 0.918, 0.918, 1)
+                                font_size: dp(36)
+                                bold: True
+                            Widget:
+                                size_hint_y: 1
+                            BoxLayout:
+                                size_hint_y: None
+                                height: dp(6)
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.2, 0.2, 0.3, 1
+                                    Rectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                    Color:
+                                        rgba: (0.776, 0.157, 0.157, 1) if root.security_score < 50 else (0.4, 0.7, 0.3, 1) if root.security_score > 80 else (0.9, 0.7, 0.2, 1)
+                                    Rectangle:
+                                        pos: self.pos
+                                        size: (self.width * root.security_score / 100, self.height)
+
+                    Card:
+                        padding: dp(12)
+                        spacing: dp(8)
+                        BoxLayout:
+                            orientation: 'vertical'
+                            spacing: dp(4)
+                            Label:
+                                text: 'Privacy'
+                                color: TEXT_SEC
+                                font_size: dp(12)
+                                bold: True
+                                size_hint_y: None
+                                height: dp(20)
+                            Label:
+                                text: str(root.privacy_score)
+                                color: (0.918, 0.918, 0.918, 1)
+                                font_size: dp(36)
+                                bold: True
+                            Widget:
+                                size_hint_y: 1
+                            BoxLayout:
+                                size_hint_y: None
+                                height: dp(6)
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.2, 0.2, 0.3, 1
+                                    Rectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                    Color:
+                                        rgba: (0.776, 0.157, 0.157, 1) if root.privacy_score < 50 else (0.4, 0.7, 0.3, 1) if root.privacy_score > 80 else (0.9, 0.7, 0.2, 1)
+                                    Rectangle:
+                                        pos: self.pos
+                                        size: (self.width * root.privacy_score / 100, self.height)
+
+                # Scan Now Button
+                RedButton:
+                    text: 'SCAN NOW'
+                    font_size: dp(18)
+                    height: dp(54)
+                    on_press: root.do_scan()
+
+                # Active Threats Badge
+                Card:
+                    padding: dp(12)
+                    size_hint_y: None
+                    height: dp(56)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        spacing: dp(12)
+                        canvas.before:
+                            Color:
+                                rgba: (0.9, 0.2, 0.2, 0.15) if root.active_threats > 0 else (0.2, 0.4, 0.2, 0.15)
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(10),]
+                        Label:
+                            text: 'Active Threats'
+                            color: TEXT
+                            font_size: dp(14)
+                            bold: True
+                            text_size: self.size
+                            halign: 'left'
+                            valign: 'center'
+                        Label:
+                            text: str(root.active_threats)
+                            color: DANGER if root.active_threats > 0 else SUCCESS
+                            font_size: dp(24)
+                            bold: True
+                            size_hint_x: None
+                            width: dp(48)
+                        Button:
+                            text: 'VIEW'
+                            background_normal: ''
+                            background_color: (0.2, 0.2, 0.35, 1)
+                            color: ACCENT
+                            font_size: dp(11)
+                            bold: True
+                            size_hint: (None, None)
+                            size: (dp(56), dp(32))
+                            pos_hint: {'center_y': 0.5}
+                            on_press: root.do_view_threats()
+
+                # Last Scan Info
+                SectionLabel:
+                    text: 'LAST SCAN: ' + root.last_scan_time
+
+                # Recent Findings
+                SectionLabel:
+                    text: 'RECENT FINDINGS'
+
+                Card:
+                    padding: dp(8)
+                    size_hint_y: None
+                    height: dp(120)
+                    Label:
+                        text: 'No recent findings'
+                        color: TEXT_SEC
+                        font_size: dp(13)
+                        opacity: 0.7
+
+        # Bottom Navigation
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            NavButton:
+                text: 'Dashboard'
+                state: 'down'
+                color: (0.914, 0.271, 0.376, 1) if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'dashboard'
+            NavButton:
+                text: 'Privacy'
+                color: (0.914, 0.271, 0.376, 1) if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'privacy'
+            NavButton:
+                text: 'Threats'
+                color: (0.914, 0.271, 0.376, 1) if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'threats'
+            NavButton:
+                text: 'Vault'
+                color: (0.914, 0.271, 0.376, 1) if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'vault'
+
+# ---------------------------------------------------------------------------
+# Scan Screen
+# ---------------------------------------------------------------------------
+
+<ScanScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: BG
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '<'
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                color: TEXT
+                font_size: dp(20)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'dashboard'
+            Label:
+                text: 'Scan'
+                color: TEXT
+                font_size: dp(18)
+                bold: True
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(16)
+                spacing: dp(16)
+
+                # Target Input
+                SectionLabel:
+                    text: 'TARGET'
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(48)
+                    spacing: dp(8)
+                    TextInput:
+                        id: target_input
+                        text: root.target_path
+                        multiline: False
+                        background_color: (0.15, 0.15, 0.25, 1)
+                        foreground_color: TEXT
+                        cursor_color: ACCENT
+                        font_size: dp(14)
+                        padding: [dp(12), dp(12), 0, 0]
+                    Button:
+                        text: '...'
+                        background_normal: ''
+                        background_color: CARD
+                        color: TEXT
+                        font_size: dp(14)
+                        bold: True
+                        size_hint_x: None
+                        width: dp(48)
+                        on_press: root.browse_target()
+
+                # Scan Type Toggle
+                SectionLabel:
+                    text: 'SCAN TYPE'
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(40)
+                    spacing: dp(8)
+                    ToggleButton:
+                        text: 'Quick Scan'
+                        group: 'scan_type'
+                        state: 'down' if root.scan_type == 'quick' else 'normal'
+                        background_normal: ''
+                        background_down: ''
+                        background_color: ACCENT if self.state == 'down' else CARD
+                        color: TEXT
+                        font_size: dp(13)
+                        bold: True
+                        on_press: root.toggle_scan_type('quick')
+                    ToggleButton:
+                        text: 'Deep Scan'
+                        group: 'scan_type'
+                        state: 'down' if root.scan_type == 'deep' else 'normal'
+                        background_normal: ''
+                        background_down: ''
+                        background_color: ACCENT if self.state == 'down' else CARD
+                        color: TEXT
+                        font_size: dp(13)
+                        bold: True
+                        on_press: root.toggle_scan_type('deep')
+
+                # Progress Bar
+                Widget:
+                    size_hint_y: None
+                    height: dp(8) if root.is_scanning else dp(0)
+                    canvas.before:
+                        Color:
+                            rgba: 0.2, 0.2, 0.3, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: self.size
+                        Color:
+                            rgba: 0.914, 0.271, 0.376, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: (self.width * root.progress / 100, self.height)
+
+                # Start Scan Button
+                RedButton:
+                    text: 'Scanning...' if root.is_scanning else 'START SCAN'
+                    disabled: root.is_scanning
+                    opacity: 0.6 if self.disabled else 1
+                    on_press: root.start_scan()
+
+                # Results
+                Widget:
+                    size_hint_y: None
+                    height: dp(0) if root.scan_result is None else dp(1)
+
+                Card:
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: dp(160) if root.scan_result else dp(0)
+                    opacity: 1 if root.scan_result else 0
+
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        spacing: dp(16)
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_x: 0.4
+                            Label:
+                                text: root.scan_result.grade if root.scan_result else ''
+                                color: SUCCESS if (root.scan_result and root.scan_result.grade in ('A', 'B')) else WARNING if (root.scan_result and root.scan_result.grade == 'C') else DANGER
+                                font_size: dp(48)
+                                bold: True
+                                halign: 'center'
+                            Label:
+                                text: 'Grade'
+                                color: TEXT_SEC
+                                font_size: dp(11)
+                                halign: 'center'
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_x: 0.6
+                            spacing: dp(8)
+                            Label:
+                                text: 'Risk Score: {}'.format(root.scan_result.risk_score if root.scan_result else 0)
+                                color: TEXT
+                                font_size: dp(16)
+                                bold: True
+                                text_size: self.size
+                                halign: 'left'
+                            Label:
+                                text: 'Findings: {}'.format(len(root.scan_result.findings) if root.scan_result else 0)
+                                color: TEXT_SEC
+                                font_size: dp(13)
+                                text_size: self.size
+                                halign: 'left'
+                            Label:
+                                text: 'Duration: {:.1f}s'.format(root.scan_result.duration if root.scan_result else 0)
+                                color: TEXT_SEC
+                                font_size: dp(13)
+                                text_size: self.size
+                                halign: 'left'
+
+                    RedButton:
+                        text: 'VIEW FULL REPORT'
+                        background_color: CARD
+                        color: ACCENT
+                        size_hint_y: None
+                        height: dp(40)
+                        on_press: root.view_full_report()
+
+        # Bottom Nav
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            NavButton:
+                text: 'Dashboard'
+                on_press: root.manager.current = 'dashboard'
+            NavButton:
+                text: 'Privacy'
+                on_press: root.manager.current = 'privacy'
+            NavButton:
+                text: 'Threats'
+                on_press: root.manager.current = 'threats'
+            NavButton:
+                text: 'Vault'
+                on_press: root.manager.current = 'vault'
+
+# ---------------------------------------------------------------------------
+# Privacy Screen
+# ---------------------------------------------------------------------------
+
+<PrivacyScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: BG
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '<'
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                color: TEXT
+                font_size: dp(20)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'dashboard'
+            Label:
+                text: 'Privacy'
+                color: TEXT
+                font_size: dp(18)
+                bold: True
+
+        # Privacy Score
+        BoxLayout:
+            size_hint_y: None
+            height: dp(100)
+            padding: dp(16), dp(8)
+            Card:
+                BoxLayout:
+                    orientation: 'horizontal'
+                    BoxLayout:
+                        orientation: 'vertical'
+                        Label:
+                            text: 'Privacy Score'
+                            color: TEXT_SEC
+                            font_size: dp(12)
+                            bold: True
+                        Label:
+                            text: str(root.privacy_score)
+                            color: TEXT
+                            font_size: dp(42)
+                            bold: True
+                    BoxLayout:
+                        size_hint_x: 0.6
+                        padding: dp(8)
+                        Widget:
+                            canvas.before:
+                                Color:
+                                    rgba: 0.2, 0.2, 0.3, 1
+                                Ellipse:
+                                    pos: (self.center_x - dp(36), self.center_y - dp(36))
+                                    size: (dp(72), dp(72))
+                                Color:
+                                    rgba: SUCCESS if root.privacy_score > 80 else WARNING if root.privacy_score > 50 else DANGER
+                                Ellipse:
+                                    pos: (self.center_x - dp(36), self.center_y - dp(36))
+                                    size: (dp(72), dp(72))
+                                    angle_start: 90
+                                    angle_end: 90 + (root.privacy_score / 100 * 360)
+                                Color:
+                                    rgba: BG
+                                Ellipse:
+                                    pos: (self.center_x - dp(28), self.center_y - dp(28))
+                                    size: (dp(56), dp(56))
+
+        # Category Tabs
+        BoxLayout:
+            size_hint_y: None
+            height: dp(40)
+            spacing: dp(4)
+            padding: dp(8), dp(0)
+            TabButton:
+                text: 'Permissions'
+                state: 'down' if root.current_category == 'permissions' else 'normal'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.switch_category('permissions')
+            TabButton:
+                text: 'Network'
+                state: 'down' if root.current_category == 'network' else 'normal'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.switch_category('network')
+            TabButton:
+                text: 'Storage'
+                state: 'down' if root.current_category == 'storage' else 'normal'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.switch_category('storage')
+            TabButton:
+                text: 'Location'
+                state: 'down' if root.current_category == 'location' else 'normal'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.switch_category('location')
+
+        # Issues List
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                id: issues_container
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(12)
+                spacing: dp(8)
+
+                Card:
+                    padding: dp(12)
+                    size_hint_y: None
+                    height: dp(64)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        spacing: dp(10)
+                        Widget:
+                            size_hint_x: None
+                            width: dp(4)
+                            canvas.before:
+                                Color:
+                                    rgba: DANGER
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
+                        BoxLayout:
+                            orientation: 'vertical'
+                            Label:
+                                text: 'Location permission active'
+                                color: TEXT
+                                font_size: dp(13)
+                                bold: True
+                                text_size: self.size
+                                halign: 'left'
+                            Label:
+                                text: '3 apps can access your location'
+                                color: TEXT_SEC
+                                font_size: dp(11)
+                                text_size: self.size
+                                halign: 'left'
+
+                Card:
+                    padding: dp(12)
+                    size_hint_y: None
+                    height: dp(64)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        spacing: dp(10)
+                        Widget:
+                            size_hint_x: None
+                            width: dp(4)
+                            canvas.before:
+                                Color:
+                                    rgba: WARNING
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
+                        BoxLayout:
+                            orientation: 'vertical'
+                            Label:
+                                text: 'Unknown sources enabled'
+                                color: TEXT
+                                font_size: dp(13)
+                                bold: True
+                                text_size: self.size
+                                halign: 'left'
+                            Label:
+                                text: 'Sideloading apps is turned on'
+                                color: TEXT_SEC
+                                font_size: dp(11)
+                                text_size: self.size
+                                halign: 'left'
+
+                Card:
+                    padding: dp(12)
+                    size_hint_y: None
+                    height: dp(64)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        spacing: dp(10)
+                        Widget:
+                            size_hint_x: None
+                            width: dp(4)
+                            canvas.before:
+                                Color:
+                                    rgba: WARNING
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
+                        BoxLayout:
+                            orientation: 'vertical'
+                            Label:
+                                text: 'USB Debugging enabled'
+                                color: TEXT
+                                font_size: dp(13)
+                                bold: True
+                                text_size: self.size
+                                halign: 'left'
+                            Label:
+                                text: 'ADB access is turned on'
+                                color: TEXT_SEC
+                                font_size: dp(11)
+                                text_size: self.size
+                                halign: 'left'
+
+        # Fix All Button
+        BoxLayout:
+            size_hint_y: None
+            height: dp(72)
+            padding: dp(16)
+            RedButton:
+                text: 'FIX ALL'
+                on_press: root.fix_all()
+
+        # Bottom Nav
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            NavButton:
+                text: 'Dashboard'
+                on_press: root.manager.current = 'dashboard'
+            NavButton:
+                text: 'Privacy'
+                state: 'down'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'privacy'
+            NavButton:
+                text: 'Threats'
+                on_press: root.manager.current = 'threats'
+            NavButton:
+                text: 'Vault'
+                on_press: root.manager.current = 'vault'
+
+# ---------------------------------------------------------------------------
+# Threats Screen
+# ---------------------------------------------------------------------------
+
+<ThreatsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: BG
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '<'
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                color: TEXT
+                font_size: dp(20)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'dashboard'
+            Label:
+                text: 'Threats'
+                color: TEXT
+                font_size: dp(18)
+                bold: True
+
+        # Empty state or list
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(16)
+                spacing: dp(8)
+
+                Widget:
+                    size_hint_y: 1
+
+                Label:
+                    text: 'No active threats'
+                    color: TEXT_SEC
+                    font_size: dp(16)
+                    opacity: 0.6
+                    size_hint_y: None
+                    height: dp(40)
+
+                Label:
+                    text: 'Your device is secure'
+                    color: SUCCESS
+                    font_size: dp(13)
+                    size_hint_y: None
+                    height: dp(24)
+
+                Widget:
+                    size_hint_y: 1
+
+        # Bottom Nav
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            NavButton:
+                text: 'Dashboard'
+                on_press: root.manager.current = 'dashboard'
+            NavButton:
+                text: 'Privacy'
+                on_press: root.manager.current = 'privacy'
+            NavButton:
+                text: 'Threats'
+                state: 'down'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'threats'
+            NavButton:
+                text: 'Vault'
+                on_press: root.manager.current = 'vault'
+
+# ---------------------------------------------------------------------------
+# Vault Screen
+# ---------------------------------------------------------------------------
+
+<VaultScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: BG
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '<'
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                color: TEXT
+                font_size: dp(20)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'dashboard'
+            Label:
+                text: 'Vault'
+                color: TEXT
+                font_size: dp(18)
+                bold: True
+
+        # Files Grid
+        ScrollView:
+            do_scroll_x: False
+            GridLayout:
+                id: vault_grid
+                cols: 3
+                spacing: dp(12)
+                padding: dp(16)
+                size_hint_y: None
+                height: self.minimum_height
+
+                # Stub items - populated dynamically
+                Card:
+                    size_hint_y: None
+                    height: dp(100)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        Label:
+                            text: '[lock]'
+                            color: ACCENT
+                            font_size: dp(24)
+                            size_hint_y: 0.5
+                        Label:
+                            text: 'document.pdf'
+                            color: TEXT
+                            font_size: dp(11)
+                            size_hint_y: 0.3
+                        Label:
+                            text: 'Tap to unlock'
+                            color: TEXT_SEC
+                            font_size: dp(9)
+                            size_hint_y: 0.2
+                    Button:
+                        background_color: (0, 0, 0, 0)
+                        on_press: root.retrieve_file(0)
+
+                Card:
+                    size_hint_y: None
+                    height: dp(100)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        Label:
+                            text: '[lock]'
+                            color: ACCENT
+                            font_size: dp(24)
+                            size_hint_y: 0.5
+                        Label:
+                            text: 'secrets.txt'
+                            color: TEXT
+                            font_size: dp(11)
+                            size_hint_y: 0.3
+                        Label:
+                            text: 'Long-press to delete'
+                            color: TEXT_SEC
+                            font_size: dp(9)
+                            size_hint_y: 0.2
+                    Button:
+                        background_color: (0, 0, 0, 0)
+                        on_press: root.retrieve_file(1)
+                        on_long_press: root.delete_file(1)
+
+                Card:
+                    size_hint_y: None
+                    height: dp(100)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        Label:
+                            text: '+'
+                            color: ACCENT
+                            font_size: dp(32)
+                            size_hint_y: 0.6
+                        Label:
+                            text: 'Add File'
+                            color: TEXT_SEC
+                            font_size: dp(11)
+                            size_hint_y: 0.4
+                    Button:
+                        background_color: (0, 0, 0, 0)
+                        on_press: root.add_file()
+
+        # Bottom Nav
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            NavButton:
+                text: 'Dashboard'
+                on_press: root.manager.current = 'dashboard'
+            NavButton:
+                text: 'Privacy'
+                on_press: root.manager.current = 'privacy'
+            NavButton:
+                text: 'Threats'
+                on_press: root.manager.current = 'threats'
+            NavButton:
+                text: 'Vault'
+                state: 'down'
+                color: ACCENT if self.state == 'down' else TEXT_SEC
+                on_press: root.manager.current = 'vault'
+
+# ---------------------------------------------------------------------------
+# Settings Screen
+# ---------------------------------------------------------------------------
+
+<SettingsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: BG
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(16), dp(8)
+            canvas.before:
+                Color:
+                    rgba: CARD
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Button:
+                text: '<'
+                background_normal: ''
+                background_color: (0, 0, 0, 0)
+                color: TEXT
+                font_size: dp(20)
+                bold: True
+                size_hint: (None, None)
+                size: (dp(40), dp(40))
+                pos_hint: {'center_y': 0.5}
+                on_press: root.manager.current = 'dashboard'
+            Label:
+                text: 'Settings'
+                color: TEXT
+                font_size: dp(18)
+                bold: True
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(16)
+                spacing: dp(12)
+
+                # Auto-scan
+                Card:
+                    padding: dp(12)
+                    size_hint_y: None
+                    height: dp(56)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        Label:
+                            text: 'Auto-scan on launch'
+                            color: TEXT
+                            font_size: dp(14)
+                            text_size: self.size
+                            halign: 'left'
+                            valign: 'center'
+                        Switch:
+                            id: auto_scan_switch
+                            active: root.auto_scan
+                            size_hint_x: None
+                            width: dp(50)
+                            on_active: root.toggle_auto_scan(self.active)
+
+                # Scan Interval
+                Card:
+                    padding: dp(12)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: dp(80)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(4)
+                        Label:
+                            text: 'Scan Interval: {} hours'.format(root.scan_interval)
+                            color: TEXT
+                            font_size: dp(14)
+                            text_size: self.size
+                            halign: 'left'
+                        Slider:
+                            min: 1
+                            max: 168
+                            value: root.scan_interval
+                            on_value: root.set_scan_interval(self.value)
+
+                # Directories
+                SectionLabel:
+                    text: 'SCAN DIRECTORIES'
+
+                Card:
+                    padding: dp(12)
+                    spacing: dp(6)
+                    size_hint_y: None
+                    height: dp(120)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(4)
+                        Label:
+                            text: '/sdcard/Download'
+                            color: TEXT_SEC
+                            font_size: dp(12)
+                            text_size: self.size
+                            halign: 'left'
+                        Label:
+                            text: '/sdcard/Documents'
+                            color: TEXT_SEC
+                            font_size: dp(12)
+                            text_size: self.size
+                            halign: 'left'
+
+                # Theme
+                SectionLabel:
+                    text: 'THEME'
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(40)
+                    spacing: dp(8)
+                    ToggleButton:
+                        text: 'Dark'
+                        group: 'theme'
+                        state: 'down' if root.theme == 'dark' else 'normal'
+                        background_normal: ''
+                        background_down: ''
+                        background_color: ACCENT if self.state == 'down' else CARD
+                        color: TEXT
+                        font_size: dp(12)
+                        bold: True
+                        on_press: root.set_theme('dark')
+                    ToggleButton:
+                        text: 'Light'
+                        group: 'theme'
+                        state: 'down' if root.theme == 'light' else 'normal'
+                        background_normal: ''
+                        background_down: ''
+                        background_color: ACCENT if self.state == 'down' else CARD
+                        color: TEXT
+                        font_size: dp(12)
+                        bold: True
+                        on_press: root.set_theme('light')
+
+                # About
+                SectionLabel:
+                    text: 'ABOUT'
+
+                Card:
+                    padding: dp(12)
+                    spacing: dp(4)
+                    size_hint_y: None
+                    height: dp(80)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        Label:
+                            text: 'VeriForge Red'
+                            color: TEXT
+                            font_size: dp(16)
+                            bold: True
+                            text_size: self.size
+                            halign: 'left'
+                        Label:
+                            text: 'Version 1.0.0'
+                            color: TEXT_SEC
+                            font_size: dp(12)
+                            text_size: self.size
+                            halign: 'left'
+                        Label:
+                            text: 'Mobile Security Sentinel'
+                            color: TEXT_SEC
+                            font_size: dp(11)
+                            text_size: self.size
+                            halign: 'left'
