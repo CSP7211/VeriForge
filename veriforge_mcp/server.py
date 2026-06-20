@@ -21,7 +21,10 @@ import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, List, Optional
 
-from .tools import VERICLAW_TOOLS, handle_tool
+from .tools_v2 import VERICLAW_TOOLS, handle_tool_v2
+
+# Legacy import (v1 kept for backward compat)
+from .tools import handle_tool as _handle_tool_legacy
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -76,7 +79,7 @@ class MCPServer:
         self.tools = VERICLAW_TOOLS
         self._server_info = {
             "name": "veriforge-mcp",
-            "version": "0.5.0",
+            "version": "0.6.0",
             "protocol_version": "2024-11-05",
         }
 
@@ -152,7 +155,7 @@ class MCPServer:
         arguments = params.get("arguments", {})
         logger.info("Tool call: %s(args=%s)", name, arguments)
 
-        result = handle_tool(name, arguments)
+        result = handle_tool_v2(name, arguments)
 
         # Wrap in MCP content schema
         if result.get("status") == "error":
