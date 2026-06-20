@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Certificate — {{ target }}</title>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --border: #d1d5db;
+  --fg: #1a1a2e;
+  --muted: #6b7280;
+  --accent: #3b82f6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --gold: #d4af37;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #60a5fa;
+    --success: #4ade80;
+    --danger: #f87171;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+.certificate {
+  max-width: 900px;
+  width: 100%;
+  background: var(--card);
+  border: 3px solid var(--gold);
+  border-radius: 16px;
+  padding: 3rem 3rem 2rem;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+.certificate::before {
+  content: "";
+  position: absolute;
+  top: 8px; left: 8px; right: 8px; bottom: 8px;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0.4;
+}
+.header {
+  text-align: center;
+  border-bottom: 2px solid var(--gold);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+.brand {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.25rem;
+}
+.seal {
+  width: 80px;
+  height: 80px;
+  margin: 1rem auto 0;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: radial-gradient(circle at 30% 30%, #fff8e1, #f5e6a3);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.1);
+}
+@media (prefers-color-scheme: dark) {
+  .seal { background: radial-gradient(circle at 30% 30%, #3d3621, #2a2515); }
+}
+.grade-display {
+  text-align: center;
+  margin: 2rem 0;
+}
+.grade-letter {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.grade-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 0.5rem;
+}
+.details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.detail-box {
+  background: rgba(59,130,246,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+.detail-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.detail-value {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.section {
+  margin-top: 2rem;
+}
+.section h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+th, td {
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  background: rgba(59,130,246,0.06);
+  font-weight: 600;
+}
+.sig-block {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(59,130,246,0.03);
+}
+.sig-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.sig-verified { color: var(--success); }
+.sig-invalid  { color: var(--danger); }
+.sig-hash {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-all;
+  margin-top: 0.5rem;
+}
+.footer {
+  text-align: center;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.status-proven { color: var(--success); font-weight: 700; }
+.status-violated { color: var(--danger); font-weight: 700; }
+.status-timeout { color: #f59e0b; font-weight: 700; }
+.status-error { color: var(--danger); font-weight: 700; }
+@media print {
+  body { background: #fff; }
+  .certificate { box-shadow: none; border-color: #d4af37; }
+}
+@media (max-width: 600px) {
+  .certificate { padding: 1.5rem; }
+  .grade-letter { font-size: 3.5rem; }
+  .details { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="certificate">
+  <div class="header">
+    <div class="brand">VeriClaw Security Certification</div>
+    <div class="title">Certificate of Security Assessment</div>
+    <div class="seal">&#x1F512;</div>
+  </div>
+
+  <div class="grade-display">
+    <div class="grade-letter" style="color:{{ grade_colour }};">{{ grade }}</div>
+    <div class="grade-label">Security Grade</div>
+  </div>
+
+  <div class="details">
+    <div class="detail-box">
+      <div class="detail-label">Target</div>
+      <div class="detail-value">{{ target }}</div>
+    </div>
+    <div class="detail-box">
+      <div class="detail-label">Risk Score</div>
+      <div class="detail-value">{{ "%.1f"|format(risk_score) }} / 10</div>
+    </div>
+    <div class="detail-box">
+      <div class="detail-label">Issued</div>
+      <div class="detail-value">{{ timestamp }}</div>
+    </div>
+    <div class="detail-box">
+      <div class="detail-label">Expires</div>
+      <div class="detail-value">{{ expires }}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>&#x1F50E; Findings ({{ findings|length }})</h3>
+    {% if findings %}
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Severity</th><th>Title</th><th>Category</th></tr>
+        </thead>
+        <tbody>
+          {% for f in findings %}
+          <tr>
+            <td><strong>{{ f.id }}</strong></td>
+            <td>{{ f.severity.upper() }}</td>
+            <td>{{ f.title }}</td>
+            <td>{{ f.category }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--muted);">No findings recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h3>&#x2705; Property Proofs ({{ proofs|length }})</h3>
+    {% if proofs %}
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>Property</th><th>Status</th><th>Confidence</th></tr>
+        </thead>
+        <tbody>
+          {% for p in proofs %}
+          <tr>
+            <td>{{ p.property_name }}</td>
+            <td class="status-{{ p.status }}">{{ p.status.upper() }}</td>
+            <td>{{ "%.0f"|format(p.confidence * 100) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--muted);">No proofs recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="sig-block">
+    <div class="detail-label">Digital Signature</div>
+    {% if signature_verified %}
+    <div class="sig-status sig-verified">
+      &#x2714; Signature Verified
+    </div>
+    {% else %}
+    <div class="sig-status sig-invalid">
+      &#x2718; Signature Invalid / Missing
+    </div>
+    {% endif %}
+    {% if signature %}
+    <div class="sig-hash">{{ signature[:80] }}{% if signature|length > 80 %}...{% endif %}</div>
+    {% endif %}
+  </div>
+
+  <div class="footer">
+    <p>Certified by <strong>VeriClaw</strong> v{{ version }}</p>
+    <p style="font-size:0.72rem;margin-top:0.4rem;">
+      This certificate cryptographically attests that the named target
+      was assessed using adversarial mutation, formal property proving,
+      and autonomous red-team simulation. Expiration does not imply
+      continued security; re-assessment is recommended before the
+      expiry date.
+    </p>
+  </div>
+</div>
+</body>
+</html>
