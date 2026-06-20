@@ -1,0 +1,11 @@
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+database/*.db
+database/*.db-journal
+.env
+.venv
+*.egg-info/
+dist/
+build/

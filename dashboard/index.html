@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VeriForge Platform — Security Operations Center</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        vf: {
+          bg: '#0a0e17',
+          surface: '#111827',
+          surfaceHover: '#1f2937',
+          border: '#1e3a5f',
+          primary: '#3b82f6',
+          primaryGlow: '#60a5fa',
+          green: '#10b981',
+          red: '#ef4444',
+          yellow: '#f59e0b',
+          text: '#f1f5f9',
+          textSecondary: '#94a3b8',
+          textMuted: '#64748b',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0e17;color:#f1f5f9;min-height:100vh}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0a0e17}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#3b82f6}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 5px rgba(59,130,246,0.2)}50%{box-shadow:0 0 20px rgba(59,130,246,0.4)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.animate-fade-in{animation:fadeIn .3s ease-out}
+.glow-blue{box-shadow:0 0 15px rgba(59,130,246,0.15)}
+.glow-blue:hover{box-shadow:0 0 25px rgba(59,130,246,0.3)}
+.glow-red{box-shadow:0 0 15px rgba(239,68,68,0.15)}
+.glow-red:hover{box-shadow:0 0 25px rgba(239,68,68,0.3)}
+.glow-green{box-shadow:0 0 15px rgba(16,185,129,0.15)}
+.glow-green:hover{box-shadow:0 0 25px rgba(16,185,129,0.3)}
+.glow-yellow{box-shadow:0 0 15px rgba(245,158,11,0.15)}
+.glow-yellow:hover{box-shadow:0 0 25px rgba(245,158,11,0.3)}
+.code-editor{font-family:'Consolas','Monaco','Courier New',monospace;background:#0d1117;color:#e6edf3;border:1px solid #1e3a5f;border-radius:8px;padding:16px;line-height:1.6;tab-size:2;resize:vertical}
+.code-editor:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
+.sidebar-link{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;color:#94a3b8;text-decoration:none;transition:all .2s;font-size:14px}
+.sidebar-link:hover{background:#1f2937;color:#f1f5f9}
+.sidebar-link.active{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+.grade-a-plus,.grade-a{background:#10b981;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-b{background:#84cc16;color:#000;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-c{background:#eab308;color:#000;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-d{background:#f97316;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-f{background:#dc2626;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.sev-critical{background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-high{background:#ef4444;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-medium{background:#f59e0b;color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-low{background:#3b82f6;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-info{background:#6b7280;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.spinner{width:24px;height:24px;border:2px solid #1e3a5f;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s ease-out}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal-content{background:#111827;border:1px solid #1e3a5f;border-radius:16px;padding:32px;width:100%;max-width:420px;animation:fadeIn .2s ease-out}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:14px;z-index:200;animation:fadeIn .3s ease-out;max-width:360px}
+.toast-success{background:#10b981;color:#fff}
+.toast-error{background:#ef4444;color:#fff}
+.toast-info{background:#3b82f6;color:#fff}
+.finding-row{cursor:pointer;transition:background .15s}
+.finding-row:hover{background:#1f2937}
+.finding-details{max-height:0;overflow:hidden;transition:max-height .3s ease-out}
+.finding-details.expanded{max-height:300px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-[#0d1117] border-r border-[#1e3a5f] z-50 transform -translate-x-full lg:translate-x-0 transition-transform">
+    <div class="p-5 flex items-center gap-3 border-b border-[#1e3a5f]">
+      <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      <div>
+        <div class="font-bold text-lg tracking-tight">VeriForge</div>
+        <div class="text-[10px] text-blue-400 font-semibold tracking-widest uppercase">Platform</div>
+      </div>
+    </div>
+    <nav class="p-3 space-y-1" id="sidebar-nav">
+      <a href="#dashboard" class="sidebar-link active" data-page="dashboard"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>Dashboard</a>
+      <a href="#scan" class="sidebar-link" data-page="scan"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>Scan</a>
+      <a href="#findings" class="sidebar-link" data-page="findings"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>Findings</a>
+      <a href="#compliance" class="sidebar-link" data-page="compliance"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Compliance</a>
+      <a href="#projects" class="sidebar-link" data-page="projects"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>Projects</a>
+      <a href="#teams" class="sidebar-link" data-page="teams"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Teams</a>
+    </nav>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-[#1e3a5f]">
+      <div class="text-xs text-gray-500">VeriForge Platform v1.0.0</div>
+      <div class="text-xs text-gray-600">Local-first. Zero cloud.</div>
+    </div>
+  </aside>
+
+  <!-- Mobile overlay -->
+  <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <!-- Main content -->
+  <div class="lg:ml-64 min-h-screen">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 bg-[#0a0e17]/80 backdrop-blur border-b border-[#1e3a5f] px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-[#1f2937]"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="text-sm text-gray-400" id="page-title">Dashboard</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="user-info" class="hidden items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm font-bold" id="user-avatar">A</div>
+          <span class="text-sm text-gray-300 hidden sm:inline" id="user-name">admin</span>
+          <button onclick="logout()" class="ml-2 px-3 py-1 text-xs rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition">Logout</button>
+        </div>
+        <button id="login-btn" onclick="showLogin()" class="px-4 py-2 text-sm rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition">Login</button>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main id="main-content" class="p-6">
+      <!-- Pages injected here -->
+    </main>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="login-modal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-bold" id="login-title">Sign In</h2>
+      <button onclick="hideLogin()" class="text-gray-500 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="flex gap-2 mb-6 bg-[#0d1117] rounded-lg p-1">
+      <button onclick="setLoginTab('login')" id="tab-login" class="flex-1 py-2 text-sm rounded-md bg-blue-500/20 text-blue-400 font-medium transition">Sign In</button>
+      <button onclick="setLoginTab('register')" id="tab-register" class="flex-1 py-2 text-sm rounded-md text-gray-400 hover:text-white transition">Register</button>
+    </div>
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="space-y-4">
+        <div><label class="block text-sm text-gray-400 mb-1">Username</label><input type="text" id="login-username" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" required></div>
+        <div><label class="block text-sm text-gray-400 mb-1">Password</label><input type="password" id="login-password" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" required></div>
+        <button type="submit" class="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"><span id="login-spinner" class="spinner hidden" style="width:16px;height:16px;border-width:2px"></span><span id="login-btn-text">Sign In</span></button>
+      </div>
+    </form>
+    <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
+      <div class="space-y-4">
+        <div><label class="block text-sm text-gray-400 mb-1">Username</label><input type="text" id="reg-username" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" required></div>
+        <div><label class="block text-sm text-gray-400 mb-1">Email</label><input type="email" id="reg-email" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" required></div>
+        <div><label class="block text-sm text-gray-400 mb-1">Password</label><input type="password" id="reg-password" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" required></div>
+        <button type="submit" class="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition">Create Account</button>
+      </div>
+    </form>
+    <div id="login-error" class="mt-4 text-red-400 text-sm hidden"></div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000/api';
+let token = localStorage.getItem('vf_token') || '';
+let currentPage = 'dashboard';
+let scanResults = null;
+
+// ─── API CLIENT ────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const url = API_BASE + path;
+  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  try {
+    const res = await fetch(url, { ...opts, headers });
+    if (res.status === 401) { token = ''; localStorage.removeItem('vf_token'); updateAuthUI(); }
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || err.message || 'Request failed'); }
+    return await res.json();
+  } catch (e) {
+    if (e.message.includes('fetch') || e.message.includes('Failed')) {
+      showToast('Backend not running. Start it with: cd backend && uvicorn backend.main:app --reload', 'error');
+    }
+    throw e;
+  }
+}
+const apiGet = (p) => api(p, { method: 'GET' });
+const apiPost = (p, b) => api(p, { method: 'POST', body: JSON.stringify(b) });
+
+// ─── AUTH ──────────────────────────────────────────────────────────
+function updateAuthUI() {
+  const userInfo = document.getElementById('user-info');
+  const loginBtn = document.getElementById('login-btn');
+  if (token) {
+    userInfo.classList.remove('hidden'); userInfo.classList.add('flex');
+    loginBtn.classList.add('hidden');
+  } else {
+    userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
+    loginBtn.classList.remove('hidden');
+  }
+}
+function showLogin() { document.getElementById('login-modal').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
+function hideLogin() { document.getElementById('login-modal').classList.add('hidden'); }
+function setLoginTab(tab) {
+  document.getElementById('tab-login').className = tab === 'login' ? 'flex-1 py-2 text-sm rounded-md bg-blue-500/20 text-blue-400 font-medium transition' : 'flex-1 py-2 text-sm rounded-md text-gray-400 hover:text-white transition';
+  document.getElementById('tab-register').className = tab === 'register' ? 'flex-1 py-2 text-sm rounded-md bg-blue-500/20 text-blue-400 font-medium transition' : 'flex-1 py-2 text-sm rounded-md text-gray-400 hover:text-white transition';
+  document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+  document.getElementById('login-title').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+}
+async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  document.getElementById('login-spinner').classList.remove('hidden');
+  try {
+    const data = await apiPost('/auth/login', { username, password });
+    token = data.access_token; localStorage.setItem('vf_token', token);
+    updateAuthUI(); hideLogin(); showToast('Signed in successfully');
+  } catch (e) { document.getElementById('login-error').textContent = e.message; document.getElementById('login-error').classList.remove('hidden'); }
+  finally { document.getElementById('login-spinner').classList.add('hidden'); }
+}
+async function handleRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('reg-username').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-password').value;
+  try {
+    const data = await apiPost('/auth/register', { username, email, password });
+    token = data.access_token; localStorage.setItem('vf_token', token);
+    updateAuthUI(); hideLogin(); showToast('Account created');
+  } catch (e) { document.getElementById('login-error').textContent = e.message; document.getElementById('login-error').classList.remove('hidden'); }
+}
+function logout() { token = ''; localStorage.removeItem('vf_token'); updateAuthUI(); showToast('Signed out'); }
+
+// ─── TOAST ─────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ─── NAVIGATION ────────────────────────────────────────────────────
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+  const titles = { dashboard: 'Dashboard', scan: 'Security Scan', findings: 'Findings', compliance: 'Compliance', projects: 'Projects', teams: 'Teams' };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  const render = { dashboard: renderDashboard, scan: renderScan, findings: renderFindings, compliance: renderCompliance, projects: renderProjects, teams: renderTeams };
+  document.getElementById('main-content').innerHTML = '';
+  (render[page] || renderDashboard)();
+  window.location.hash = page;
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('-translate-x-full');
+  document.getElementById('mobile-overlay').classList.toggle('hidden');
+}
+
+// ─── STAT CARD ─────────────────────────────────────────────────────
+function statCard(title, value, subtitle, icon, colorClass) {
+  const glowClass = colorClass === 'red' ? 'glow-red' : colorClass === 'green' ? 'glow-green' : colorClass === 'yellow' ? 'glow-yellow' : 'glow-blue';
+  const textClass = colorClass === 'red' ? 'text-red-400' : colorClass === 'green' ? 'text-emerald-400' : colorClass === 'yellow' ? 'text-amber-400' : 'text-blue-400';
+  return `<div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6 ${glowClass} transition-all cursor-default">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-sm text-gray-400">${title}</div>
+      <div class="text-2xl ${textClass}">${icon}</div>
+    </div>
+    <div class="text-3xl font-bold mb-1">${value}</div>
+    <div class="text-xs text-gray-500">${subtitle}</div>
+  </div>`;
+}
+
+// ─── GRADE BADGE ───────────────────────────────────────────────────
+function gradeBadge(g) {
+  const cls = `grade-${(g || 'f').toLowerCase().replace('+', '-plus')}`;
+  return `<span class="${cls}">${g || 'F'}</span>`;
+}
+
+// ─── SEVERITY BADGE ────────────────────────────────────────────────
+function sevBadge(s) {
+  return `<span class="sev-${s}">${s.toUpperCase()}</span>`;
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────────────
+function renderDashboard() {
+  const el = document.getElementById('main-content');
+  el.innerHTML = `
+    <div class="animate-fade-in space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        ${statCard('Projects', '0', 'Active scan targets', '&#128193;', 'blue')}
+        ${statCard('Total Scans', '0', 'All-time executions', '&#128269;', 'green')}
+        ${statCard('Open Findings', '0', 'Unresolved issues', '&#128308;', 'yellow')}
+        ${statCard('Critical', '0', 'Immediate attention', '&#9888;', 'red')}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quick Scan -->
+        <div class="lg:col-span-2 bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Quick Security Scan</h2>
+            <span class="text-xs text-gray-500">Paste code below to scan</span>
+          </div>
+          <textarea id="quick-code" class="code-editor w-full h-48 text-sm" placeholder="// Paste your code here to scan...
+// Example:
+import os, pickle
+API_KEY = 'sk-secret123'
+result = eval(user_input)">import os, pickle, yaml
+
+API_KEY = "sk-abc123xyz789secret000"
+DATABASE_PASSWORD = "admin123!"
+DEBUG = True
+
+def handle(data):
+    result = eval(data)
+    return result
+
+def get_user(uid):
+    cursor.execute("SELECT * FROM users WHERE id = " + uid)
+    return cursor.fetchone()
+
+def load_data(f):
+    return pickle.load(f)</textarea>
+          <div class="flex items-center justify-between mt-4">
+            <div class="flex gap-2">
+              <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer"><input type="checkbox" id="qs-soc2" checked class="accent-blue-500"> SOC2</label>
+              <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer"><input type="checkbox" id="qs-iso" class="accent-blue-500"> ISO27001</label>
+              <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer"><input type="checkbox" id="qs-pci" class="accent-blue-500"> PCI-DSS</label>
+            </div>
+            <button onclick="runQuickScan()" id="qs-btn" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center gap-2">
+              <span id="qs-spinner" class="spinner hidden" style="width:16px;height:16px;border-width:2px"></span>
+              <span id="qs-text">Run Pipeline</span>
+            </button>
+          </div>
+          <div id="qs-results" class="mt-6 hidden"></div>
+        </div>
+
+        <!-- Grade Distribution -->
+        <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+          <h3 class="text-sm font-semibold text-gray-300 mb-4">Grade Distribution</h3>
+          <div id="grade-bars" class="space-y-3">${['A+','A','B','C','D','F'].map(g => `
+            <div class="flex items-center gap-3">
+              <span class="w-8 text-xs font-bold ${g === 'A+' || g === 'A' ? 'text-emerald-400' : g === 'F' ? 'text-red-400' : 'text-gray-400'}">${g}</span>
+              <div class="flex-1 h-6 bg-[#0d1117] rounded-md overflow-hidden"><div class="h-full ${g === 'A+' || g === 'A' ? 'bg-emerald-500' : g === 'B' ? 'bg-lime-500' : g === 'C' ? 'bg-yellow-500' : g === 'D' ? 'bg-orange-500' : 'bg-red-500'} bar-fill" style="width:0%" data-grade="${g}"></div></div>
+              <span class="w-6 text-right text-xs text-gray-500" data-grade-count="${g}">0</span>
+            </div>`).join('')}</div>
+          <h3 class="text-sm font-semibold text-gray-300 mt-6 mb-4">Severity Distribution</h3>
+          <div id="sev-bars" class="space-y-2">${['critical','high','medium','low','info'].map(s => `
+            <div class="flex items-center gap-3">
+              <span class="w-16 text-xs ${s === 'critical' ? 'text-red-400' : s === 'high' ? 'text-orange-400' : s === 'medium' ? 'text-yellow-400' : s === 'low' ? 'text-blue-400' : 'text-gray-400'}">${s}</span>
+              <div class="flex-1 h-4 bg-[#0d1117] rounded-md overflow-hidden"><div class="h-full ${s === 'critical' ? 'bg-red-500' : s === 'high' ? 'bg-orange-500' : s === 'medium' ? 'bg-yellow-500' : s === 'low' ? 'bg-blue-500' : 'bg-gray-500'} bar-fill" style="width:0%" data-sev="${s}"></div></div>
+              <span class="w-6 text-right text-xs text-gray-500" data-sev-count="${s}">0</span>
+            </div>`).join('')}</div>
+        </div>
+      </div>
+
+      <!-- Recent Scans -->
+      <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-[#1e3a5f] flex items-center justify-between">
+          <h3 class="font-semibold">Recent Scans</h3>
+          <span class="text-xs text-gray-500" id="scan-count">0 total</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-gray-500 border-b border-[#1e3a5f]">
+              <th class="px-6 py-3 font-medium">ID</th><th class="px-6 py-3 font-medium">Scanner</th><th class="px-6 py-3 font-medium">Grade</th>
+              <th class="px-6 py-3 font-medium">Risk</th><th class="px-6 py-3 font-medium">Findings</th><th class="px-6 py-3 font-medium">Status</th>
+            </tr></thead>
+            <tbody id="recent-scans-body"><tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No scans yet. Run your first scan above.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  loadDashboardData();
+}
+
+async function loadDashboardData() {
+  try {
+    const data = await apiGet('/dashboard/stats');
+    const cards = document.querySelectorAll('.animate-fade-in .grid > div > div.text-3xl');
+    if (cards[0]) cards[0].textContent = data.projects || 0;
+    if (cards[1]) cards[1].textContent = data.scans || 0;
+    if (cards[2]) cards[2].textContent = data.open_findings || 0;
+    if (cards[3]) cards[3].textContent = data.critical_findings || 0;
+
+    // Grade bars
+    const maxGrade = Math.max(...(data.grade_distribution || []).map(g => g.count), 1);
+    (data.grade_distribution || []).forEach(g => {
+      const bar = document.querySelector(`[data-grade="${g.grade}"]`);
+      const count = document.querySelector(`[data-grade-count="${g.grade}"]`);
+      if (bar) bar.style.width = (g.count / maxGrade * 100) + '%';
+      if (count) count.textContent = g.count;
+    });
+
+    // Severity bars
+    const maxSev = Math.max(...(data.severity_distribution || []).map(s => s.count), 1);
+    (data.severity_distribution || []).forEach(s => {
+      const bar = document.querySelector(`[data-sev="${s.severity}"]`);
+      const count = document.querySelector(`[data-sev-count="${s.severity}"]`);
+      if (bar) bar.style.width = (s.count / maxSev * 100) + '%';
+      if (count) count.textContent = s.count;
+    });
+
+    // Recent scans
+    const tbody = document.getElementById('recent-scans-body');
+    if (data.recent_scans && data.recent_scans.length > 0) {
+      tbody.innerHTML = data.recent_scans.map(s => `
+        <tr class="border-b border-[#1e3a5f]/50 finding-row">
+          <td class="px-6 py-3 font-mono text-xs text-gray-400">#${s.id}</td>
+          <td class="px-6 py-3 text-gray-300">${s.scanner?.replace('veriforge_', '') || 'scan'}</td>
+          <td class="px-6 py-3">${gradeBadge(s.grade)}</td>
+          <td class="px-6 py-3"><div class="w-16 h-2 bg-[#0d1117] rounded-full overflow-hidden"><div class="h-full ${(s.risk_score || 0) > 7 ? 'bg-red-500' : (s.risk_score || 0) > 4 ? 'bg-yellow-500' : 'bg-emerald-500'}" style="width:${(s.risk_score || 0) * 10}%"></div></div></td>
+          <td class="px-6 py-3 text-gray-400">${s.findings_count || 0}</td>
+          <td class="px-6 py-3"><span class="text-xs px-2 py-1 rounded ${s.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : s.status === 'running' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}">${s.status}</span></td>
+        </tr>`).join('');
+      document.getElementById('scan-count').textContent = data.scans + ' total';
+    }
+  } catch (e) { /* Backend might not be running, show defaults */ }
+}
+
+async function runQuickScan() {
+  const code = document.getElementById('quick-code').value;
+  if (!code.trim()) { showToast('Paste some code first', 'error'); return; }
+  const standards = [];
+  if (document.getElementById('qs-soc2').checked) standards.push('SOC2');
+  if (document.getElementById('qs-iso').checked) standards.push('ISO27001');
+  if (document.getElementById('qs-pci').checked) standards.push('PCI-DSS');
+
+  document.getElementById('qs-spinner').classList.remove('hidden');
+  document.getElementById('qs-text').textContent = 'Scanning...';
+  try {
+    const result = await apiPost('/pipeline', { code, standards, project_id: 1 });
+    scanResults = result;
+    const findings = result.findings || [];
+    const sevCounts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    findings.forEach(f => { if (sevCounts[f.severity] !== undefined) sevCounts[f.severity]++; });
+
+    document.getElementById('qs-results').innerHTML = `
+      <div class="border-t border-[#1e3a5f] pt-4">
+        <div class="flex items-center gap-6 mb-4">
+          <div>Grade: ${gradeBadge(result.grade)}</div>
+          <div class="text-sm text-gray-400">Risk Score: <span class="font-bold ${result.risk_score > 7 ? 'text-red-400' : 'text-yellow-400'}">${result.risk_score}/10</span></div>
+          <div class="text-sm text-gray-400">Duration: ${result.duration_ms}ms</div>
+          <div class="text-sm text-gray-400">Findings: ${findings.length}</div>
+        </div>
+        ${findings.length > 0 ? `
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          ${findings.slice(0, 10).map(f => `
+          <div class="flex items-start gap-3 p-3 bg-[#0d1117] rounded-lg border border-[#1e3a5f]/50">
+            <div class="mt-0.5">${sevBadge(f.severity)}</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-200">${f.title}</div>
+              <div class="text-xs text-gray-500 mt-1">${f.cwe || ''} | Line ${f.line}${f.matched ? ' | <code class="text-amber-400">' + f.matched.substring(0, 40) + '</code>' : ''}</div>
+              <div class="text-xs text-blue-400 mt-1">Fix: ${f.fix}</div>
+            </div>
+          </div>`).join('')}
+        </div>` : '<div class="text-green-400 text-sm">No security issues found!</div>'}
+      </div>`;
+    document.getElementById('qs-results').classList.remove('hidden');
+    loadDashboardData(); // refresh stats
+    showToast(`Scan complete: Grade ${result.grade}, ${findings.length} findings`);
+  } catch (e) { showToast('Scan failed: ' + e.message, 'error'); }
+  finally { document.getElementById('qs-spinner').classList.add('hidden'); document.getElementById('qs-text').textContent = 'Run Pipeline'; }
+}
+
+// ─── SCAN PAGE ─────────────────────────────────────────────────────
+function renderScan() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="animate-fade-in space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+          <h2 class="text-lg font-semibold mb-4 flex items-center gap-2"><svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>Code Editor</h2>
+          <textarea id="scan-code" class="code-editor w-full h-96 text-sm" placeholder="// Paste code to scan...">import os, pickle, yaml, subprocess
+
+API_KEY = "sk-abc123xyz789secret000"
+DATABASE_PASSWORD = "admin123!"
+SECRET_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+DEBUG = True
+
+def process(user_input):
+    result = eval(user_input)
+    subprocess.run(f"echo {user_input}", shell=True)
+    return result
+
+def get_user(uid):
+    cursor.execute(f"SELECT * FROM users WHERE id = {uid}")
+    return cursor.fetchone()
+
+def load_config():
+    with open("config.yaml") as f:
+        return yaml.load(f)
+
+def load_data(filename):
+    return pickle.load(open(filename, "rb"))
+</textarea>
+        </div>
+        <div class="space-y-4">
+          <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+            <h3 class="font-semibold mb-4">Scanner</h3>
+            <div class="space-y-2" id="scanner-list">
+              ${[
+                {id:'veriforge_security_scan',name:'Security Scan',desc:'Deep security analysis with 12 CVE patterns'},
+                {id:'veriforge_verify_code',name:'Code Verification',desc:'4-layer: syntax, semantic, formal, compliance'},
+                {id:'veriforge_check_compliance',name:'Compliance Check',desc:'SOC2 / ISO27001 / PCI-DSS validation'},
+                {id:'veriforge_generate_spec',name:'Generate Spec',desc:'NL to formal specification'},
+                {id:'veriforge_generate_tests',name:'Generate Tests',desc:'Property-based test generation'},
+                {id:'veriforge_audit_chain',name:'Audit Chain',desc:'HMAC-SHA256 audit trail'},
+                {id:'veriforge_explain_finding',name:'Explain Finding',desc:'Educational vulnerability explanations'}
+              ].map((s,i) => `<label class="flex items-start gap-3 p-3 rounded-lg border border-[#1e3a5f]/50 cursor-pointer hover:bg-[#1f2937] transition scanner-option" data-scanner="${s.id}">
+                <input type="radio" name="scanner" value="${s.id}" ${i===0?'checked':''} class="mt-1 accent-blue-500">
+                <div><div class="text-sm font-medium text-gray-200">${s.name}</div><div class="text-xs text-gray-500">${s.desc}</div></div>
+              </label>`).join('')}
+            </div>
+          </div>
+          <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+            <h3 class="font-semibold mb-3">Compliance Standards</h3>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="std-soc2" checked class="accent-blue-500"> SOC2</label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="std-iso" class="accent-blue-500"> ISO27001</label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="std-pci" class="accent-blue-500"> PCI-DSS</label>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <button onclick="runScan('pipeline')" id="btn-pipeline" class="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+              <span class="spinner hidden" style="width:16px;height:16px;border-width:2px"></span><span>Run Full Pipeline</span>
+            </button>
+            <button onclick="runScan('single')" id="btn-single" class="flex-1 py-3 bg-[#1f2937] hover:bg-[#374151] text-gray-200 rounded-lg font-medium transition flex items-center justify-center gap-2">
+              <span class="spinner hidden" style="width:16px;height:16px;border-width:2px"></span><span>Run Selected</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="scan-results" class="hidden"></div>
+    </div>`;
+}
+
+async function runScan(mode) {
+  const code = document.getElementById('scan-code').value;
+  if (!code.trim()) { showToast('Paste some code first', 'error'); return; }
+  const btnId = mode === 'pipeline' ? 'btn-pipeline' : 'btn-single';
+  const btn = document.getElementById(btnId);
+  const spinner = btn.querySelector('.spinner');
+  spinner.classList.remove('hidden'); btn.disabled = true;
+
+  try {
+    let result;
+    if (mode === 'pipeline') {
+      const standards = [];
+      if (document.getElementById('std-soc2').checked) standards.push('SOC2');
+      if (document.getElementById('std-iso').checked) standards.push('ISO27001');
+      if (document.getElementById('std-pci').checked) standards.push('PCI-DSS');
+      result = await apiPost('/pipeline', { code, standards, project_id: 1 });
+    } else {
+      const scanner = document.querySelector('input[name="scanner"]:checked').value;
+      const standard = document.getElementById('std-soc2').checked ? 'SOC2' : 'SOC2';
+      result = await apiPost('/scans', { project_id: 1, scanner, code, standard });
+      if (result.result) result = { ...result, ...result.result };
+    }
+    displayScanResults(result, mode);
+    showToast(`Scan complete: Grade ${result.grade || 'N/A'}`);
+  } catch (e) { showToast('Scan failed: ' + e.message, 'error'); }
+  finally { spinner.classList.add('hidden'); btn.disabled = false; }
+}
+
+function displayScanResults(result, mode) {
+  const findings = result.findings || [];
+  const el = document.getElementById('scan-results');
+  el.classList.remove('hidden');
+
+  let compHtml = '';
+  if (result.scanners) {
+    Object.entries(result.scanners).forEach(([key, val]) => {
+      if (val.status === 'success' && val.result?.overall_score !== undefined) {
+        compHtml += `<div class="text-sm"><span class="text-gray-400">${key.replace('compliance_', '').toUpperCase()}:</span> <span class="font-bold ${val.result.overall_score >= 80 ? 'text-emerald-400' : val.result.overall_score >= 50 ? 'text-yellow-400' : 'text-red-400'}">${val.result.overall_score}%</span></div>`;
+      }
+    });
+  }
+
+  el.innerHTML = `
+    <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6 animate-fade-in">
+      <div class="flex flex-wrap items-center gap-6 mb-6 pb-4 border-b border-[#1e3a5f]">
+        <div class="flex items-center gap-3"><span class="text-gray-400">Grade</span>${gradeBadge(result.grade)}</div>
+        <div><span class="text-gray-400">Risk:</span> <span class="font-bold ${result.risk_score > 7 ? 'text-red-400' : 'text-yellow-400'}">${result.risk_score}/10</span></div>
+        <div><span class="text-gray-400">Duration:</span> <span class="text-gray-200">${result.duration_ms}ms</span></div>
+        <div><span class="text-gray-400">Findings:</span> <span class="text-gray-200">${findings.length}</span></div>
+        ${compHtml}
+      </div>
+      ${findings.length > 0 ? `<div class="overflow-x-auto">
+        <table class="w-full text-sm"><thead><tr class="text-left text-gray-500 border-b border-[#1e3a5f]">
+          <th class="px-4 py-2">Severity</th><th class="px-4 py-2">Title</th><th class="px-4 py-2">CWE</th><th class="px-4 py-2">Line</th><th class="px-4 py-2">Match</th><th class="px-4 py-2">Fix</th>
+        </tr></thead><tbody>
+        ${findings.map(f => `<tr class="border-b border-[#1e3a5f]/30 finding-row">
+          <td class="px-4 py-3">${sevBadge(f.severity)}</td>
+          <td class="px-4 py-3 text-gray-200">${f.title}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs">${f.cwe || '-'}</td>
+          <td class="px-4 py-3 text-gray-400 font-mono text-xs">${f.line}</td>
+          <td class="px-4 py-3"><code class="text-xs text-amber-400 bg-[#0d1117] px-2 py-1 rounded">${(f.matched || '').substring(0, 30)}</code></td>
+          <td class="px-4 py-3 text-blue-400 text-xs">${f.fix}</td>
+        </tr>`).join('')}
+        </tbody></table>
+      </div>` : '<div class="text-emerald-400 py-4">No security issues found!</div>'}
+      <details class="mt-4"><summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-300">View Raw JSON</summary>
+        <pre class="mt-2 text-xs text-gray-400 bg-[#0d1117] p-4 rounded-lg overflow-x-auto">${JSON.stringify(result, null, 2).substring(0, 3000)}</pre>
+      </details>
+    </div>`;
+}
+
+// ─── FINDINGS PAGE ─────────────────────────────────────────────────
+let findingsData = [];
+let findingsFilter = { status: 'open', severity: 'all', search: '' };
+
+function renderFindings() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="animate-fade-in space-y-4">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex bg-[#111827] rounded-lg p-1 border border-[#1e3a5f]">
+          ${['all','open','resolved','false_positive','accepted'].map(s => `<button onclick="filterFindings('status','${s}')" class="status-tab px-4 py-2 text-sm rounded-md transition ${findingsFilter.status===s?'bg-blue-500/20 text-blue-400':'text-gray-400 hover:text-white'}" data-status="${s}">${s.replace('_',' ')}</button>`).join('')}
+        </div>
+        <div class="flex bg-[#111827] rounded-lg p-1 border border-[#1e3a5f]">
+          ${['all','critical','high','medium','low','info'].map(s => `<button onclick="filterFindings('severity','${s}')" class="sev-tab px-3 py-2 text-sm rounded-md transition ${findingsFilter.severity===s?'bg-blue-500/20 text-blue-400':'text-gray-400 hover:text-white'}" data-severity="${s}">${s}</button>`).join('')}
+        </div>
+        <input type="text" id="finding-search" oninput="filterFindings('search',this.value)" placeholder="Search findings..." class="px-4 py-2 bg-[#111827] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500 w-64">
+      </div>
+      <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl overflow-hidden">
+        <div class="overflow-x-auto"><table class="w-full text-sm">
+          <thead><tr class="text-left text-gray-500 border-b border-[#1e3a5f]">
+            <th class="px-6 py-3">Severity</th><th class="px-6 py-3">Title</th><th class="px-6 py-3">CWE</th><th class="px-6 py-3">Line</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Actions</th>
+          </tr></thead>
+          <tbody id="findings-body"><tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading findings...</td></tr></tbody>
+        </table></div>
+        <div class="px-6 py-3 border-t border-[#1e3a5f] text-xs text-gray-500" id="findings-count">0 findings</div>
+      </div>
+    </div>`;
+  loadFindings();
+}
+
+async function loadFindings() {
+  try {
+    const data = await apiGet('/findings?status=' + findingsFilter.status);
+    findingsData = data.findings || [];
+    applyFindingFilters();
+  } catch (e) { document.getElementById('findings-body').innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Failed to load. Is backend running?</td></tr>'; }
+}
+
+function filterFindings(type, value) {
+  findingsFilter[type] = value;
+  if (type === 'status') { document.querySelectorAll('.status-tab').forEach(t => t.className = t.className.replace(/bg-blue-500\/20 text-blue-400|text-gray-400 hover:text-white/, t.dataset.status === value ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-white')); loadFindings(); return; }
+  if (type === 'severity') { document.querySelectorAll('.sev-tab').forEach(t => t.className = t.className.replace(/bg-blue-500\/20 text-blue-400|text-gray-400 hover:text-white/, t.dataset.severity === value ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:text-white')); }
+  applyFindingFilters();
+}
+
+function applyFindingFilters() {
+  let filtered = findingsData;
+  if (findingsFilter.severity !== 'all') filtered = filtered.filter(f => f.severity === findingsFilter.severity);
+  if (findingsFilter.search) { const q = findingsFilter.search.toLowerCase(); filtered = filtered.filter(f => (f.title || '').toLowerCase().includes(q) || (f.cwe || '').toLowerCase().includes(q)); }
+
+  const tbody = document.getElementById('findings-body');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No findings match current filters</td></tr>';
+  } else {
+    tbody.innerHTML = filtered.map(f => `
+      <tr class="border-b border-[#1e3a5f]/30 finding-row" onclick="this.nextElementSibling.classList.toggle('expanded')">
+        <td class="px-6 py-3">${sevBadge(f.severity)}</td>
+        <td class="px-6 py-3 text-gray-200">${f.title}</td>
+        <td class="px-6 py-3 text-gray-400 text-xs">${f.cwe || '-'}</td>
+        <td class="px-6 py-3 text-gray-400 font-mono text-xs">${f.line || '-'}</td>
+        <td class="px-6 py-3"><span class="text-xs px-2 py-1 rounded ${f.status === 'open' ? 'bg-red-500/10 text-red-400' : f.status === 'resolved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-500/10 text-gray-400'}">${f.status}</span></td>
+        <td class="px-6 py-3"><button onclick="event.stopPropagation();resolveFinding(${f.id})" class="text-xs text-blue-400 hover:text-blue-300">Resolve</button></td>
+      </tr>
+      <tr class="finding-details"><td colspan="6" class="px-6 py-4 bg-[#0d1117]">
+        <div class="text-xs text-gray-400 mb-2">Matched: <code class="text-amber-400">${f.matched || '-'}</code></div>
+        <div class="text-xs text-blue-400">Fix: ${f.fix || 'Review code and apply security best practices'}</div>
+      </td></tr>`).join('');
+  }
+  document.getElementById('findings-count').textContent = filtered.length + ' findings';
+}
+
+async function resolveFinding(id) {
+  try { await api('/findings/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'resolved' }) }); showToast('Finding resolved'); loadFindings(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+// ─── COMPLIANCE PAGE ───────────────────────────────────────────────
+function renderCompliance() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="animate-fade-in space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        ${['SOC2','ISO27001','PCI-DSS'].map(std => `
+        <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6 text-center">
+          <div class="w-24 h-24 mx-auto mb-4 relative">
+            <svg class="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#1e3a5f" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="${std==='SOC2'?'#3b82f6':std==='ISO27001'?'#10b981':'#f59e0b'}" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="264" class="comp-ring" data-std="${std}"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span class="text-2xl font-bold comp-score" data-std="${std}">--</span>
+            </div>
+          </div>
+          <h3 class="font-semibold">${std}</h3>
+          <div class="text-xs text-gray-500 mt-1 comp-passfail" data-std="${std}">-- passed / -- failed</div>
+        </div>`).join('')}
+      </div>
+      <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-6">
+        <h3 class="font-semibold mb-4">Run Compliance Check</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <textarea id="comp-code" class="code-editor w-full h-48 text-sm" placeholder="Paste code to check compliance...">API_KEY = "secret123"
+DEBUG = True
+def query(uid): cursor.execute(f"SELECT * FROM users WHERE id = {uid}")</textarea>
+          <div class="space-y-4">
+            <select id="comp-standard" class="w-full px-4 py-2.5 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500">
+              <option value="SOC2">SOC2</option><option value="ISO27001">ISO27001</option><option value="PCI-DSS">PCI-DSS</option>
+            </select>
+            <button onclick="runCompliance()" id="comp-btn" class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+              <span class="spinner hidden" style="width:16px;height:16px;border-width:2px"></span><span>Check Compliance</span>
+            </button>
+          </div>
+        </div>
+        <div id="comp-results" class="mt-4 hidden"></div>
+      </div>
+    </div>`;
+}
+
+async function runCompliance() {
+  const code = document.getElementById('comp-code').value;
+  const standard = document.getElementById('comp-standard').value;
+  const btn = document.getElementById('comp-btn');
+  btn.querySelector('.spinner').classList.remove('hidden'); btn.disabled = true;
+  try {
+    const result = await apiPost('/compliance/check', { code, standard, project_id: 1 });
+    const score = result.overall_score || 0;
+    const ring = document.querySelector(`.comp-ring[data-std="${standard}"]`);
+    const scoreEl = document.querySelector(`.comp-score[data-std="${standard}"]`);
+    const pfEl = document.querySelector(`.comp-passfail[data-std="${standard}"]`);
+    if (ring) ring.style.strokeDashoffset = 264 - (score / 100 * 264);
+    if (scoreEl) scoreEl.textContent = score + '%';
+    if (pfEl) pfEl.textContent = `${result.passed || 0} passed / ${result.failed || 0} failed`;
+
+    const checks = result.checks || [];
+    document.getElementById('comp-results').innerHTML = `
+      <div class="border-t border-[#1e3a5f] pt-4 space-y-2">
+        <div class="text-sm font-semibold mb-2">Controls (${checks.length})</div>
+        ${checks.map(c => `<div class="flex items-center gap-3 p-3 rounded-lg ${c.passed ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-red-500/5 border border-red-500/20'}">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center ${c.passed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">${c.passed ? '&#10003;' : '&#10007;'}</div>
+          <div class="flex-1"><div class="text-sm">${c.control_id}</div><div class="text-xs text-gray-500">${c.description}</div></div>
+          <div class="text-xs ${c.passed ? 'text-emerald-400' : 'text-red-400'}">${c.passed ? 'PASS' : 'FAIL'}</div>
+        </div>`).join('')}
+      </div>`;
+    document.getElementById('comp-results').classList.remove('hidden');
+    showToast(`${standard} compliance check: ${score}%`);
+  } catch (e) { showToast('Compliance check failed: ' + e.message, 'error'); }
+  finally { btn.querySelector('.spinner').classList.add('hidden'); btn.disabled = false; }
+}
+
+// ─── PROJECTS PAGE ─────────────────────────────────────────────────
+function renderProjects() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="animate-fade-in space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Projects</h2>
+        <button onclick="showNewProject()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>New Project</button>
+      </div>
+      <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">Loading...</div>
+      <div id="new-project-form" class="hidden bg-[#111827] border border-[#1e3a5f] rounded-xl p-6 max-w-lg">
+        <h3 class="font-semibold mb-4">New Project</h3>
+        <div class="space-y-4">
+          <div><label class="block text-sm text-gray-400 mb-1">Name</label><input type="text" id="proj-name" class="w-full px-4 py-2 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500"></div>
+          <div><label class="block text-sm text-gray-400 mb-1">Description</label><textarea id="proj-desc" class="w-full px-4 py-2 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500 h-20"></textarea></div>
+          <div class="flex gap-3"><button onclick="createProject()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Create</button><button onclick="hideNewProject()" class="px-4 py-2 bg-[#1f2937] text-gray-400 rounded-lg text-sm">Cancel</button></div>
+        </div>
+      </div>
+    </div>`;
+  loadProjects();
+}
+
+async function loadProjects() {
+  try {
+    const data = await apiGet('/projects');
+    const grid = document.getElementById('projects-grid');
+    if (!data.projects || data.projects.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">No projects yet. Create your first project.</div>'; return;
+    }
+    grid.innerHTML = data.projects.map(p => `
+      <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-5 glow-blue transition-all cursor-pointer" onclick="viewProject(${p.id})">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-200 truncate">${p.name}</h3>
+          ${gradeBadge(p.grade)}
+        </div>
+        <p class="text-xs text-gray-500 mb-3 line-clamp-2">${p.description || 'No description'}</p>
+        <div class="flex items-center gap-4 text-xs text-gray-400">
+          <span>Risk: ${p.risk_score || 0}/10</span>
+          <span>${p.source_type || 'paste'}</span>
+        </div>
+      </div>`).join('');
+  } catch (e) { document.getElementById('projects-grid').innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">Failed to load projects</div>'; }
+}
+
+function showNewProject() { document.getElementById('new-project-form').classList.remove('hidden'); }
+function hideNewProject() { document.getElementById('new-project-form').classList.add('hidden'); }
+async function createProject() {
+  const name = document.getElementById('proj-name').value;
+  const desc = document.getElementById('proj-desc').value;
+  if (!name) { showToast('Project name required', 'error'); return; }
+  try { await apiPost('/projects', { name, description: desc }); showToast('Project created'); hideNewProject(); loadProjects(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+}
+function viewProject(id) { showToast('Project detail view coming soon'); }
+
+// ─── TEAMS PAGE ────────────────────────────────────────────────────
+function renderTeams() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="animate-fade-in space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Teams</h2>
+        <button onclick="showNewTeam()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>New Team</button>
+      </div>
+      <div id="teams-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">Loading...</div>
+      <div id="new-team-form" class="hidden bg-[#111827] border border-[#1e3a5f] rounded-xl p-6 max-w-lg">
+        <h3 class="font-semibold mb-4">Create Team</h3>
+        <div class="space-y-4">
+          <div><label class="block text-sm text-gray-400 mb-1">Name</label><input type="text" id="team-name" class="w-full px-4 py-2 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500"></div>
+          <div><label class="block text-sm text-gray-400 mb-1">Slug</label><input type="text" id="team-slug" class="w-full px-4 py-2 bg-[#0d1117] border border-[#1e3a5f] rounded-lg text-sm focus:outline-none focus:border-blue-500" placeholder="my-team"></div>
+          <div class="flex gap-3"><button onclick="createTeam()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Create</button><button onclick="hideNewTeam()" class="px-4 py-2 bg-[#1f2937] text-gray-400 rounded-lg text-sm">Cancel</button></div>
+        </div>
+      </div>
+    </div>`;
+  loadTeams();
+}
+
+async function loadTeams() {
+  try {
+    const data = await apiGet('/teams');
+    const grid = document.getElementById('teams-grid');
+    if (!data.teams || data.teams.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">No teams yet.</div>'; return;
+    }
+    grid.innerHTML = data.teams.map(t => `
+      <div class="bg-[#111827] border border-[#1e3a5f] rounded-xl p-5">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-gray-200">${t.name}</h3>
+          <span class="text-xs text-gray-500">@${t.slug}</span>
+        </div>
+        <div class="text-xs text-gray-500">${t.member_count || 0} members</div>
+      </div>`).join('');
+  } catch (e) { document.getElementById('teams-grid').innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">Failed to load teams</div>'; }
+}
+function showNewTeam() { document.getElementById('new-team-form').classList.remove('hidden'); }
+function hideNewTeam() { document.getElementById('new-team-form').classList.add('hidden'); }
+async function createTeam() {
+  const name = document.getElementById('team-name').value;
+  const slug = document.getElementById('team-slug').value;
+  if (!name || !slug) { showToast('Name and slug required', 'error'); return; }
+  try { await apiPost('/teams', { name, slug }); showToast('Team created'); hideNewTeam(); loadTeams(); } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('hashchange', () => navigate(window.location.hash.slice(1) || 'dashboard'));
+document.addEventListener('DOMContentLoaded', () => {
+  updateAuthUI();
+  const page = window.location.hash.slice(1) || 'dashboard';
+  navigate(page);
+});
+</script>
+</body>
+</html>
