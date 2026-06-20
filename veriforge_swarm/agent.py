@@ -118,12 +118,14 @@ class Agent:
     def sign_message(self, message: str) -> str:
         """Produce an HMAC-SHA256 signature over *message*.
 
-        The HMAC key is the agent's private key.  The returned string is
-        hex-encoded and can be distributed openly alongside the message.
+        The HMAC key is the agent's **public key** so that any peer can
+        verify the signature without access to private material.  The
+        returned string is hex-encoded and can be distributed openly
+        alongside the message.
         """
         if not isinstance(message, str):
             raise TypeError("message must be str")
-        key = self.private_key.encode("utf-8")
+        key = self.public_key.encode("utf-8")
         msg = message.encode("utf-8")
         sig = hmac.new(key, msg, hashlib.sha256).hexdigest()
         self._message_history.append(

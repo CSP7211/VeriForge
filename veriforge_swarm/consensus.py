@@ -73,6 +73,17 @@ class Proposal:
         expected = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         return expected == self.digest
 
+    def to_dict(self) -> dict[str, Any]:
+        """Safe serialisation of the proposal."""
+        return {
+            "proposal_id": self.proposal_id,
+            "proposer_id": self.proposer_id,
+            "value": dict(self.value),
+            "digest": self.digest,
+            "created_at": self.created_at,
+            "metadata": dict(self.metadata),
+        }
+
 
 @dataclass
 class Vote:
@@ -137,7 +148,7 @@ class Result:
     total_votes:
         Total votes tallied.
     byzantine_agents:
-        List of ``agent_id``\ s detected as Byzantine (conflicting votes).
+        List of ``agent_id`` strings detected as Byzantine (conflicting votes).
     quorum_needed:
         Minimum votes required for a valid result.
     metadata:
@@ -265,7 +276,7 @@ class BFTConsensus:
         """Detect agents casting conflicting votes.
 
         When *agent* is ``None``, returns a **list** of all Byzantine
-        ``agent_id``\ s found in *votes*.
+        ``agent_id`` strings found in *votes*.
 
         When *agent* is provided, returns ``True`` if that specific agent
         cast conflicting votes in *votes*.

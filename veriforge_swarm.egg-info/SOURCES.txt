@@ -1,0 +1,17 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+tests/__init__.py
+tests/test_swarm.py
+veriforge_swarm/__init__.py
+veriforge_swarm/agent.py
+veriforge_swarm/consensus.py
+veriforge_swarm/demo.py
+veriforge_swarm/swarm.py
+veriforge_swarm.egg-info/PKG-INFO
+veriforge_swarm.egg-info/SOURCES.txt
+veriforge_swarm.egg-info/dependency_links.txt
+veriforge_swarm.egg-info/entry_points.txt
+veriforge_swarm.egg-info/requires.txt
+veriforge_swarm.egg-info/top_level.txt

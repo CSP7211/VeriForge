@@ -450,7 +450,7 @@ class TestRedBlueSwarm:
         f2 = Finding("f2", "a", "y", "high")
         swarm.findings = [f1, f2]
         swarm.fixes = [Fix("x1", "b", "f1", "fix1", "code")]
-        assert swarm._compute_grade() == "D"  # 1/2 = 0.5 → C, but rounding...
+        assert swarm._compute_grade() == "C"  # 1/2 = 0.5 → C
         swarm.fixes.append(Fix("x2", "b", "f2", "fix2", "code"))
         assert swarm._compute_grade() == "A"  # 2/2 = 1.0
 
