@@ -1,0 +1,4 @@
+PyJWT>=2.8.0
+
+[dev]
+pytest>=7.0
