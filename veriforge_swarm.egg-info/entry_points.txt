@@ -1,2 +1,0 @@
-[console_scripts]
-veriforge-demo = veriforge_swarm.demo:run_all_demos
