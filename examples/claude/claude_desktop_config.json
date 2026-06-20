@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "veriforge": {
+      "command": "python",
+      "args": ["-m", "veriforge_mcp.server", "--transport", "stdio"],
+      "env": {
+        "VERIFORGE_SECRET_KEY": "your-secret-key",
+        "PYTHONPATH": "/path/to/veriforge_mcp"
+      },
+      "description": "VeriForge MCP Server — code verification, compliance, and security scanning",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

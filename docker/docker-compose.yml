@@ -1,0 +1,51 @@
+# VeriForge MCP Server — Docker Compose
+# Run the SSE transport for web-based integrations
+
+version: "3.9"
+
+services:
+  veriforge-mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: veriforge-mcp:0.5.0
+    container_name: veriforge-mcp-server
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      - VERIFORGE_SECRET_KEY=${VERIFORGE_SECRET_KEY:-default-dev-key-change-in-production}
+      - PYTHONUNBUFFERED=1
+
+    command: ["--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - veriforge-net
+
+networks:
+  veriforge-net:
+    driver: bridge
