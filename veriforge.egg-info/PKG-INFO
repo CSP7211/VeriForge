@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: veriforge
+Version: 1.0.0
+Summary: VeriForge Red
+Author: CSP7211
+Requires-Python: >=3.10
+Requires-Dist: PyJWT>=2.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Dynamic: author
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
