@@ -1,0 +1,15 @@
+name: Security
+on: [push, pull_request, schedule]
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install bandit[safety] safety
+      - run: bandit -r veriforge/ -f json -o bandit-report.json
+      - run: safety check
+      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/analyze@v3
