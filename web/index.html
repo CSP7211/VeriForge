@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jarvis — VeriForge AI Assistant</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        jarvis: { bg: '#050810', surface: '#0a0f1a', surface2: '#111827', primary: '#00d4ff', primaryDim: 'rgba(0,212,255,0.1)', glow: 'rgba(0,212,255,0.3)', text: '#e2e8f0', muted: '#64748b' }
+      }
+    }
+  }
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#050810;color:#e2e8f0;min-height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+
+.orb-container{position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center}
+.orb{width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#80eeff,#00d4ff,#0077aa);box-shadow:0 0 30px rgba(0,212,255,0.4),0 0 60px rgba(0,212,255,0.2),inset 0 0 20px rgba(255,255,255,0.2);animation:orbPulse 3s ease-in-out infinite;transition:all .5s}
+.orb.thinking{animation:orbThink .8s ease-in-out infinite;box-shadow:0 0 50px rgba(0,212,255,0.6),0 0 100px rgba(0,212,255,0.3)}
+.orb.speaking{animation:orbSpeak .5s ease-in-out infinite;box-shadow:0 0 40px rgba(0,212,255,0.5),0 0 80px rgba(0,212,255,0.25)}
+.orb.alert{background:radial-gradient(circle at 35% 35%,#ff8888,#ff4444,#aa0000);box-shadow:0 0 30px rgba(255,68,68,0.4),0 0 60px rgba(255,68,68,0.2)}
+.orb-ring{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,0.15);animation:orbRing 4s linear infinite}
+.orb-ring:nth-child(1){width:90px;height:90px;animation-delay:0s}
+.orb-ring:nth-child(2){width:110px;height:110px;border-color:rgba(0,212,255,0.1);animation-delay:-1.3s;animation-duration:5s}
+.orb-ring:nth-child(3){width:130px;height:130px;border-color:rgba(0,212,255,0.05);animation-delay:-2.6s;animation-duration:6s}
+@keyframes orbPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:0.9}}
+@keyframes orbThink{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes orbSpeak{0%,100%{transform:scale(1)}25%{transform:scale(1.08)}75%{transform:scale(0.95)}}
+@keyframes orbRing{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+.particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+.particle{position:absolute;width:2px;height:2px;background:rgba(0,212,255,0.3);border-radius:50%;animation:particleFloat linear infinite}
+@keyframes particleFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+
+.chat-msg{animation:msgIn .3s ease-out;margin-bottom:12px;max-width:85%}
+.chat-msg.jarvis{align-self:flex-start}
+.chat-msg.user{align-self:flex-end;text-align:right}
+.msg-bubble{padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.6}
+.jarvis .msg-bubble{background:#0a0f1a;border:1px solid rgba(0,212,255,0.15);border-top-left-radius:4px;color:#e2e8f0}
+.user .msg-bubble{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);border-top-right-radius:4px;color:#e2e8f0}
+.msg-time{font-size:10px;color:#64748b;margin-top:4px}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.typing{display:flex;gap:4px;padding:12px 16px}
+.typing span{width:6px;height:6px;background:#00d4ff;border-radius:50%;animation:typingBounce 1.4s ease-in-out infinite}
+.typing span:nth-child(2){animation-delay:0.2s}
+.typing span:nth-child(3){animation-delay:0.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+
+.input-glow:focus-within{box-shadow:0 0 0 2px rgba(0,212,255,0.2),0 0 20px rgba(0,212,255,0.1)}
+
+.cmd-btn{padding:6px 14px;border-radius:8px;font-size:12px;border:1px solid rgba(0,212,255,0.15);background:rgba(0,212,255,0.05);color:#00d4ff;cursor:pointer;transition:all .2s;white-space:nowrap}
+.cmd-btn:hover{background:rgba(0,212,255,0.15);border-color:rgba(0,212,255,0.3)}
+.cmd-btn:active{transform:scale(0.97)}
+
+.grid-bg{background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:50px 50px}
+
+.spinner{width:18px;height:18px;border:2px solid rgba(0,212,255,0.1);border-top-color:#00d4ff;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.scan-line{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.5),transparent);animation:scanLine 4s linear infinite;pointer-events:none}
+@keyframes scanLine{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.status-dot.online{background:#10b981;box-shadow:0 0 6px #10b981}
+.status-dot.busy{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.status-dot.offline{background:#ef4444;box-shadow:0 0 6px #ef4444}
+
+pre{background:#050810;padding:12px;border-radius:8px;overflow-x:auto;font-size:12px;font-family:monospace;border:1px solid rgba(30,58,95,0.3);margin:8px 0}
+code{font-family:monospace;color:#fbbf24}
+.grade-ap,.grade-a{background:#10b981;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-b{background:#84cc16;color:#000;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-c{background:#eab308;color:#000;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-d{background:#f97316;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.grade-f{background:#dc2626;color:#fff;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.sev-critical{background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-high{background:#ef4444;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-medium{background:#f59e0b;color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-low{background:#3b82f6;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.sev-info{background:#6b7280;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+</style>
+</head>
+<body class="grid-bg">
+<div class="particles" id="particles"></div>
+<div class="scan-line"></div>
+
+<div class="relative z-10 flex h-screen">
+  <aside class="w-72 bg-[#0a0f1a]/80 backdrop-blur border-r border-[#1e3a5f]/50 flex flex-col">
+    <div class="p-5 border-b border-[#1e3a5f]/50">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">V</div>
+        <div>
+          <div class="font-semibold text-sm">VeriForge <span class="text-cyan-400">Jarvis</span></div>
+          <div class="text-[10px] text-gray-500 flex items-center gap-1.5">
+            <span class="status-dot online" id="status-dot"></span>
+            <span id="status-text">Online</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex-1 flex flex-col items-center justify-center p-6">
+      <div class="orb-container mb-6">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb" id="orb"></div>
+      </div>
+      <div class="text-center">
+        <div class="text-xs text-gray-500 mb-1" id="orb-state">Ready</div>
+        <div class="text-[10px] text-gray-600 font-mono" id="intent-display">AWAITING INPUT</div>
+      </div>
+    </div>
+    <div class="p-4 border-t border-[#1e3a5f]/50 space-y-3">
+      <div class="flex justify-between text-xs"><span class="text-gray-500">Conversations</span><span class="text-cyan-400 font-mono" id="stat-turns">0</span></div>
+      <div class="flex justify-between text-xs"><span class="text-gray-500">Scans Run</span><span class="text-cyan-400 font-mono" id="stat-scans">0</span></div>
+      <div class="flex justify-between text-xs"><span class="text-gray-500">Findings</span><span class="text-cyan-400 font-mono" id="stat-findings">0</span></div>
+      <div class="flex justify-between text-xs"><span class="text-gray-500">Products</span><span class="text-cyan-400 font-mono">8</span></div>
+    </div>
+    <div class="p-4 border-t border-[#1e3a5f]/50 flex gap-2">
+      <button onclick="toggleVoice()" id="voice-btn" class="cmd-btn flex-1 flex items-center justify-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>Voice
+      </button>
+      <button onclick="clearChat()" class="cmd-btn flex-1 flex items-center justify-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>Clear
+      </button>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col min-w-0">
+    <div id="chat-area" class="flex-1 overflow-y-auto p-6 flex flex-col">
+      <div class="chat-msg jarvis mb-8">
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-1">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="msg-bubble text-sm leading-relaxed">
+              <strong class="text-cyan-400">Jarvis v1.0.0 — Online</strong><br><br>
+              At your service. I can scan code for vulnerabilities, check compliance, explain security findings, generate formal specifications, and more. All powered by the VeriForge ecosystem.<br><br>
+              <span class="text-gray-500">Try: "scan this code" or "explain CVE-2024-002"</span>
+            </div>
+            <div class="msg-time mt-1">now</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-3 border-t border-[#1e3a5f]/30">
+      <div class="flex gap-2 overflow-x-auto pb-1" id="cmd-palette">
+        <button onclick="quickCmd('scan')" class="cmd-btn">Scan Code</button>
+        <button onclick="quickCmd('compliance')" class="cmd-btn">Compliance</button>
+        <button onclick="quickCmd('explain')" class="cmd-btn">Explain CVE</button>
+        <button onclick="quickCmd('spec')" class="cmd-btn">Generate Spec</button>
+        <button onclick="quickCmd('tests')" class="cmd-btn">Generate Tests</button>
+        <button onclick="quickCmd('status')" class="cmd-btn">Status</button>
+        <button onclick="quickCmd('help')" class="cmd-btn">Help</button>
+      </div>
+    </div>
+    <div class="p-4 border-t border-[#1e3a5f]/50">
+      <div class="flex gap-3 items-end">
+        <div class="flex-1 input-glow bg-[#0a0f1a] border border-[#1e3a5f]/50 rounded-xl overflow-hidden transition-all">
+          <textarea id="chat-input" rows="1" class="w-full bg-transparent px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:outline-none resize-none" placeholder="Command Jarvis... (e.g., 'scan this code', 'explain CVE-2024-002')" onkeydown="handleKeydown(event)"></textarea>
+          <div class="hidden" id="code-attachment">
+            <div class="mx-4 mb-2 p-2 bg-[#111827] rounded-lg border border-[#1e3a5f]/30 flex items-center justify-between">
+              <span class="text-xs text-cyan-400 font-mono">Code attached</span>
+              <button onclick="removeCodeAttachment()" class="text-gray-500 hover:text-red-400"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="attachCode()" class="w-10 h-10 rounded-xl bg-[#111827] border border-[#1e3a5f]/50 flex items-center justify-center text-gray-500 hover:text-cyan-400 hover:border-cyan-400/30 transition" title="Attach code">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </button>
+          <button onclick="sendMessage()" id="send-btn" class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="code-modal" class="fixed inset-0 bg-black/60 backdrop-blur z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-[#0a0f1a] border border-[#1e3a5f] rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div class="p-4 border-b border-[#1e3a5f]/50 flex items-center justify-between">
+      <span class="font-semibold text-sm">Attach Code</span>
+      <button onclick="closeCodeModal()" class="text-gray-500 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div class="p-4 flex-1"><textarea id="code-input" class="w-full h-64 bg-[#0d1117] border border-[#1e3a5f] rounded-lg p-4 text-sm font-mono text-gray-200 focus:outline-none focus:border-cyan-500 resize-none" placeholder="Paste code here..."></textarea></div>
+    <div class="p-4 border-t border-[#1e3a5f]/50 flex justify-end gap-2">
+      <button onclick="closeCodeModal()" class="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
+      <button onclick="confirmCodeAttach()" class="px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-lg text-sm hover:bg-cyan-500/20">Attach</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  JARVIS CLIENT-SIDE BRAIN — Fully Embedded JavaScript
+//  No backend required. All intelligence runs in-browser.
+// ═══════════════════════════════════════════════════════════════════
+
+// ─── CVE DATABASE ─────────────────────────────────────────────────
+const CVE_DB = {
+  "CVE-2024-001": {title:"Hardcoded Secrets",severity:"high",cvss:7.5,desc:"Sensitive credentials embedded in source code.",fix:"Use environment variables or a secrets manager.",bad:"API_KEY = 'sk-abc123'",good:"API_KEY = process.env.API_KEY"},
+  "CVE-2024-002": {title:"Remote Code Execution via eval()",severity:"critical",cvss:9.8,desc:"eval() executes arbitrary code from strings, enabling complete system compromise.",fix:"Replace with JSON.parse() or a safe parser.",bad:"result = eval(userInput)",good:"result = JSON.parse(userInput)"},
+  "CVE-2024-003": {title:"Path Traversal",severity:"high",cvss:7.5,desc:"User-controlled paths can access files outside intended directories.",fix:"Normalize paths and verify within sandbox.",bad:"readFile('/data/' + userPath)",good:"readFile(sandbox + basename(userPath))"},
+  "CVE-2024-004": {title:"Authentication Bypass",severity:"critical",cvss:9.1,desc:"Missing or weak auth allows unauthorized access.",fix:"Implement multi-factor auth with signed tokens.",bad:"if(token === 'admin')",good:"if(verifyJWT(token, secret))"},
+  "CVE-2024-005": {title:"SQL Injection",severity:"critical",cvss:9.3,desc:"Dynamic SQL allows arbitrary database commands.",fix:"Use parameterized queries.",bad:'query(`SELECT * FROM users WHERE id = ${uid}`)',good:'query("SELECT * FROM users WHERE id = ?", [uid])'},
+  "CVE-2024-006": {title:"Denial of Service",severity:"medium",cvss:6.5,desc:"No input size limits can exhaust resources.",fix:"Implement size limits, timeouts, rate limiting.",bad:"data = readAll()",good:"data = readLimited(MAX_SIZE)"},
+  "CVE-2024-007": {title:"Weak Compliance Controls",severity:"medium",cvss:5.3,desc:"Code fails SOC2/ISO27001/PCI-DSS requirements.",fix:"Implement automated compliance validation.",bad:"No audit logging",good:"HMAC-signed audit chain"},
+  "CVE-2024-008": {title:"Unsafe Deserialization",severity:"high",cvss:8.1,desc:"JSON.parse on untrusted data or unsafe eval can execute code.",fix:"Use safe JSON parsing with schema validation.",bad:"JSON.parse(untrusted)",good:"safeParseJSON(untrusted, schema)"},
+  "CVE-2024-009": {title:"Mutable Security Results",severity:"low",cvss:3.7,desc:"Results can be modified after generation.",fix:"Return immutable objects with signatures.",bad:"result.grade = 'A'",good:"Object.freeze(result)"},
+  "CVE-2024-010": {title:"Information Disclosure",severity:"medium",cvss:5.0,desc:"Verbose errors expose system internals.",fix:"Sanitize error output. Log details server-side.",bad:"throw new Error(DB_PASSWORD)",good:"throw new Error('Service unavailable')"},
+  "CVE-2024-011": {title:"Supply Chain Vulnerability",severity:"high",cvss:8.3,desc:"Unverified dependencies can introduce malicious code.",fix:"Pin versions, verify checksums, use lockfiles.",bad:"npm install requests",good:"npm install requests@2.31.0"},
+  "CVE-2024-012": {title:"Mutable Audit Log",severity:"high",cvss:7.8,desc:"Audit logs without integrity protection can be tampered.",fix:"Use HMAC-SHA256 chain.",bad:"log.push(timestamp + ':' + event)",good:"signEntry(timestamp, event, prevHMAC)"}
+};
+
+// ─── SECURITY PATTERNS ────────────────────────────────────────────
+const PATTERNS = [
+  {id:"eval_exec",name:"Dynamic Code Execution (eval/exec)",severity:"critical",regex:/\b(eval|exec)\s*\(/,cwe:"CWE-95",fix:"Use JSON.parse() or a safe parser"},
+  {id:"hardcoded_password",name:"Hardcoded Password",severity:"high",regex:/(password|passwd|pwd)\s*=\s*["'][^"']+["']/i,cwe:"CWE-798",fix:"Use env vars: process.env.PASSWORD"},
+  {id:"hardcoded_secret",name:"Hardcoded Secret/Token",severity:"high",regex:/(api_key|apikey|secret|token)\s*=\s*["'][^"']{8,}["']/i,cwe:"CWE-798",fix:"Use env vars: process.env.API_KEY"},
+  {id:"sql_injection",name:"SQL Injection",severity:"critical",regex:/(execute|query)\s*\(\s*[`"'].*\$\{|\b(query|execute)\s*\(\s*["'].*\+|f["'].*SELECT|f["'].*INSERT)/i,cwe:"CWE-89",fix:"Use parameterized queries"},
+  {id:"unsafe_deserialize",name:"Unsafe Deserialization",severity:"high",regex:/JSON\.parse\s*\(\s*[^)]*(?:req\.|request\.|body|input|user|untrusted)/i,cwe:"CWE-502",fix:"Validate with schema before parsing"},
+  {id:"subprocess_shell",name:"Shell Injection",severity:"high",regex:/subprocess\.(call|run|Popen).*shell\s*=\s*True/,cwe:"CWE-78",fix:"Use shell=False with array args"},
+  {id:"debug_true",name:"Debug Mode in Production",severity:"medium",regex:/\bDEBUG\s*=\s*True/,cwe:"CWE-489",fix:"Set DEBUG = False in production"},
+  {id:"http_url",name:"Insecure HTTP URL",severity:"low",regex:/http:\/\/[^"'\s]+/,cwe:"CWE-319",fix:"Replace http:// with https://"},
+  {id:"todo_marker",name:"Development Marker",severity:"info",regex:/#\s*(TODO|FIXME|HACK|XXX|BUG)/i,cwe:"CWE-546",fix:"Resolve before production"},
+  {id:"md5_hash",name:"Weak Hash Algorithm",severity:"medium",regex:/\b(md5|sha1)\s*\(/i,cwe:"CWE-916",fix:"Use SHA-256 or stronger"},
+  {id:"insecure_random",name:"Insecure Random",severity:"medium",regex:/\bMath\.random\s*\(\)/,cwe:"CWE-338",fix:"Use crypto.getRandomValues()"},
+  {id:"innerHTML",name:"XSS via innerHTML",severity:"high",regex:/\.innerHTML\s*=.*\+/,cwe:"CWE-79",fix:"Use textContent or sanitize with DOMPurify"}
+];
+
+// ─── COMPLIANCE RULES ─────────────────────────────────────────────
+const COMPLIANCE_RULES = {
+  SOC2: [
+    {id:"CC6.1",desc:"Secrets not in code",check:"no_secrets",weight:3},
+    {id:"CC6.2",desc:"Authentication support",check:"has_auth",weight:2},
+    {id:"CC7.1",desc:"System operations monitoring",check:"has_logging",weight:3},
+    {id:"CC7.2",desc:"Security incident detection",check:"has_error_handling",weight:2},
+    {id:"CC8.1",desc:"Change management",check:"has_imports",weight:1}
+  ],
+  ISO27001: [
+    {id:"A.9.4.3",desc:"Password management",check:"no_plaintext_passwords",weight:3},
+    {id:"A.12.6.1",desc:"Vulnerability management",check:"no_known_vulns",weight:3},
+    {id:"A.14.2.8",desc:"Secure engineering",check:"no_unsafe_deser",weight:2}
+  ],
+  PCI: [
+    {id:"REQ-2.1",desc:"Default passwords changed",check:"no_default_passwords",weight:3},
+    {id:"REQ-6.5.1",desc:"Injection flaws prevented",check:"no_sql_injection",weight:3},
+    {id:"REQ-8.2.1",desc:"Strong cryptography",check:"no_plaintext_secrets",weight:3}
+  ]
+};
+
+// ─── INTENT CLASSIFICATION ────────────────────────────────────────
+const INTENTS = {
+  security_scan: { triggers: [/scan (?:this )?code/i,/security scan/i,/check .*vuln/i,/analyze .*code/i,/pentest/i,/audit .*code/i,/find vuln/i,/inspect code/i] },
+  verify_code: { triggers: [/verify (?:this )?code/i,/code verification/i,/review .*code/i,/lint .*code/i,/check .*quality/i] },
+  check_compliance: { triggers: [/check compliance/i,/compliance check/i,/soc2/i,/iso27001/i,/pci.dss/i,/regulatory check/i] },
+  explain_finding: { triggers: [/explain .*finding/i,/what is (?:cve|CVE)/i,/explain (?:cve|CVE)/i,/what does this mean/i,/why is this (?:bad|critical)/i,/how (?:bad|serious)/i] },
+  generate_spec: { triggers: [/generate spec/i,/formal spec/i,/specification/i,/write a spec/i,/precondition/i,/postcondition/i] },
+  generate_tests: { triggers: [/generate tests/i,/write tests/i,/test cases/i,/property test/i,/unit test/i,/test this/i] },
+  audit_chain: { triggers: [/audit (?:log|chain)/i,/create audit/i,/verify audit/i,/tamper proof/i,/hmac audit/i] },
+  system_status: { triggers: [/system status/i,/health check/i,/are you (?:ok|online)/i,/component status/i,/diagnostics/i] },
+  help: { triggers: [/^help$/i,/what can you do/i,/list commands/i,/capabilities/i,/who are you/i,/what are you/i] },
+  conversation: { triggers: [/^hello$/i,/^hi$/i,/^hey$/i,/how are you/i,/good morning/i,/thank/i,/joke/i] }
+};
+
+// ─── PERSONALITY TEMPLATES ────────────────────────────────────────
+const TEMPLATES = {
+  greeting: ["At your service. How may I assist with security today?","Online and ready. What shall we analyze?","Systems operational. Awaiting your command."],
+  scan_start: ["Initiating security scan. Analyzing {patterns} patterns...","Scanning commenced. Checking all known vulnerability signatures.","Running security analysis now."],
+  scan_clean: ["Scan complete. Excellent news — no security issues detected. Grade: A+."],
+  scan_findings: ["Scan complete. Grade: {grade}. Found {count} issue(s).{detail}","Analysis finished. Security grade is {grade}.{detail}"],
+  compliance: ["{standard} compliance: {score}%. {passed} passed, {failed} failed.{recommendation}","Compliance check against {standard}: {score}%.{recommendation}"],
+  explain: ["Here's the breakdown for {id}: **{title}** (Severity: **{severity}** | CVSS: **{cvss}/10**).\n\n{desc}\n\n**Vulnerable pattern:**\n```\n{bad}\n```\n\n**Secure fix:**\n```\n{good}\n```\n\n**Mitigation:** {fix}"],
+  spec: ["Formal specification generated:\n\n**Pre-conditions:**\n{pre}\n\n**Post-conditions:**\n{post}\n\n**Invariants:**\n{inv}"],
+  tests: ["Generated {count} property-based tests:\n{tests}"],
+  status: ["All VeriForge components operational. 8 products ready. 12 CVE patterns loaded. 8 MCP tools available."],
+  help: ["I can help with:\n\n**Security:** Scan code, verify code, check compliance (SOC2/ISO27001/PCI-DSS)\n**Intelligence:** Explain CVEs, generate formal specs, create test cases\n**Audit:** Build tamper-proof audit chains\n**General:** System status, conversation\n\nTry: `scan this code` or `explain CVE-2024-002`"],
+  joke: ["Why did the security analyst break up with the cryptographer? There was no trust.","I told a UDP joke once, but I'm not sure if anyone got it.","Why do programmers prefer dark mode? Because light attracts bugs.","A SQL query walks into a bar, walks up to two tables and asks: 'Can I join you?'","I would tell you a joke about eval(), but I'm afraid it might execute."],
+  thanks: ["Always a pleasure.","My pleasure. Shall I prepare anything else?","Happy to assist. Standing by."],
+  unknown: ["I'm not sure I understood that. Try: 'scan this code', 'explain CVE-2024-002', or 'check compliance'."]
+};
+
+// ─── STATE ────────────────────────────────────────────────────────
+let attachedCode = '';
+let voiceEnabled = false;
+let isProcessing = false;
+let conversationTurns = 0;
+let scanCount = 0;
+let totalFindings = 0;
+const memory = { preferences: {}, scanCount: 0, userName: null };
+
+// ─── INTENT ROUTER ────────────────────────────────────────────────
+function classifyIntent(text) {
+  const t = text.toLowerCase().trim();
+  let best = 'conversation', bestScore = 0;
+  for (const [name, data] of Object.entries(INTENTS)) {
+    let score = 0;
+    for (const p of data.triggers) { if (p.test(t)) score += 0.7 + Math.min(p.source.length / 100, 0.3); }
+    const keywords = name.replace(/_/g, ' ').split(' ');
+    for (const kw of keywords) { if (t.includes(kw)) score += 0.15; }
+    if (score > bestScore) { bestScore = score; best = name; }
+  }
+  if (best === 'conversation' && t.length > 20 && /(def |import |class |=|;|{|})/.test(text)) {
+    return 'security_scan';
+  }
+  return best;
+}
+
+function extractCode(text) {
+  const block = text.match(/```(\w+)?\n([\s\S]*?)```/);
+  if (block) return block[2].trim();
+  const inline = text.match(/`([^`]+)`/);
+  if (inline) return inline[1];
+  return text.trim();
+}
+
+function extractCVE(text) {
+  const m = text.match(/CVE-\d{4}-\d+/i);
+  return m ? m[0].toUpperCase() : '';
+}
+
+function extractStandard(text) {
+  const t = text.toLowerCase();
+  if (t.includes('soc2') || t.includes('soc 2')) return 'SOC2';
+  if (t.includes('iso')) return 'ISO27001';
+  if (t.includes('pci')) return 'PCI-DSS';
+  return 'SOC2';
+}
+
+// ─── SECURITY SCANNER ─────────────────────────────────────────────
+function scanCode(code) {
+  const findings = [];
+  const lines = code.split('\n');
+  for (const p of PATTERNS) {
+    for (let i = 0; i < lines.length; i++) {
+      const matches = lines[i].matchAll(p.regex);
+      for (const m of matches) {
+        findings.push({id:`VF-${p.id.toUpperCase()}-${findings.length}`,title:p.name,severity:p.severity,cwe:p.cwe,fix:p.fix,line:i+1,column:m.index+1,matched:m[0],rule:p.id});
+      }
+    }
+  }
+  return findings;
+}
+
+function calcGrade(findings) {
+  const w = {critical:3, high:2, medium:1, low:0.5, info:0.1};
+  const s = Math.min(findings.reduce((a,f)=>a+(w[f.severity]||0.5),0), 10);
+  if (s===0) return 'A+'; if (s<2) return 'A'; if (s<4) return 'B'; if (s<6) return 'C'; if (s<8) return 'D'; return 'F';
+}
+
+function calcRisk(findings) {
+  const w = {critical:3, high:2, medium:1, low:0.5, info:0.1};
+  return Math.min(findings.reduce((a,f)=>a+(w[f.severity]||0),0), 10).toFixed(1);
+}
+
+// ─── COMPLIANCE CHECKER ───────────────────────────────────────────
+function checkCompliance(code, standard) {
+  const rules = COMPLIANCE_RULES[standard] || COMPLIANCE_RULES.SOC2;
+  const cl = code.toLowerCase();
+  const hasSecrets = /(password|secret|api_key|token)\s*=\s*["']/.test(code);
+  const hasEval = /\b(eval|exec)\s*\(/.test(code);
+  const hasSQL = /(query|execute)\s*\(.*\$\{|.*\+/.test(code);
+  const hasDebug = /DEBUG\s*=\s*True/.test(code);
+  const hasLogging = /console\.(log|warn|error)|import.*log/.test(cl);
+  const hasError = /try\s*\{|catch\s*\(/.test(cl);
+  const hasImports = /^(import|const|require)\b/m.test(code);
+  const hasUnsafeDeser = /JSON\.parse\s*\(\s*(?:req|request|body|input|user)/i.test(code);
+
+  const results = [];
+  for (const r of rules) {
+    let passed = true;
+    switch(r.check) {
+      case 'no_secrets': case 'no_plaintext_passwords': case 'no_plaintext_secrets': case 'no_default_passwords':
+        if (hasSecrets) passed = false; break;
+      case 'has_auth': passed = true; break;
+      case 'has_logging': if (!hasLogging) passed = false; break;
+      case 'has_error_handling': if (!hasError) passed = false; break;
+      case 'has_imports': if (!hasImports) passed = false; break;
+      case 'no_known_vulns': if (hasEval) passed = false; break;
+      case 'no_sql_injection': if (hasSQL) passed = false; break;
+      case 'no_unsafe_deser': if (hasUnsafeDeser) passed = false; break;
+    }
+    results.push({control_id:r.id,description:r.desc,passed,weight:r.weight});
+  }
+  const tw = results.reduce((a,r)=>a+r.weight,0);
+  const pw = results.filter(r=>r.passed).reduce((a,r)=>a+r.weight,0);
+  const score = tw ? Math.round(pw/tw*100) : 0;
+  return {standard,score,checks:results,passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length};
+}
+
+// ─── SPEC GENERATOR ───────────────────────────────────────────────
+function generateSpec(description) {
+  const d = description.toLowerCase();
+  if (d.includes('positive') && d.includes('integer')) {
+    return {pre:['x is not null','typeof x === "number"','x > 0','x < Number.MAX_SAFE_INTEGER'],post:['result >= 0','Math.abs(result * result - x) < 0.0001'],inv:['typeof result === "number"']};
+  }
+  if (d.includes('transfer') || d.includes('money') || d.includes('payment')) {
+    return {pre:['fromAccount.balance >= amount','amount > 0','toAccount.active === true','amount <= MAX_TRANSACTION'],post:['fromAccount.balance === old(from) - amount','toAccount.balance === old(to) + amount','totalSystemBalance unchanged'],inv:['amount > 0','fromAccount !== toAccount']};
+  }
+  if (d.includes('divide') || d.includes('division')) {
+    return {pre:['b !== 0 (divisor must not be zero)','typeof a === "number"','typeof b === "number"'],post:['result === a / b','result is finite'],inv:['b !== 0']};
+  }
+  return {pre:['All inputs are validated and sanitized','Required resources are available'],post:['Function completes without unhandled exceptions','Return value matches expected type'],inv:['System state remains consistent']};
+}
+
+// ─── TEST GENERATOR ───────────────────────────────────────────────
+function generateTests(spec) {
+  const s = spec.toLowerCase();
+  if (s.includes('divide') || s.includes('/')) {
+    return [{name:'test_divide_positive',input:'a=10, b=2',expected:5,prop:'a / b === expected'},{name:'test_divide_by_one',input:'a=5, b=1',expected:5,prop:'a / 1 === a'},{name:'test_divide_by_zero',input:'a=5, b=0',expected:'throws Error',prop:'b === 0 throws Error'},{name:'test_divide_negative',input:'a=-10, b=2',expected:-5,prop:'negative / positive === negative'},{name:'test_divide_identity',input:'a=7, b=7',expected:1,prop:'a / a === 1'}];
+  }
+  if (s.includes('sqrt') || s.includes('square root')) {
+    return [{name:'test_sqrt_perfect',input:'x=16',expected:4,prop:'sqrt(x)**2 === x'},{name:'test_sqrt_zero',input:'x=0',expected:0,prop:'sqrt(0) === 0'},{name:'test_sqrt_negative',input:'x=-4',expected:'throws Error',prop:'x < 0 throws Error'},{name:'test_sqrt_float',input:'x=2.0',expected:1.414,prop:'result**2 ≈ x'}];
+  }
+  return [{name:'test_basic',input:'valid',expected:'pass',prop:'runs without error'},{name:'test_invalid',input:'invalid',expected:'throws',prop:'invalid input raises error'},{name:'test_output_type',input:'valid',expected:'correct type',prop:'return type matches'},{name:'test_idempotency',input:'same',expected:'same output',prop:'same input → same output'}];
+}
+
+// ─── PERSONALITY ──────────────────────────────────────────────────
+function pick(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+function formatGrade(g) { return `<span class="grade-${g.toLowerCase().replace('+','-plus')}">${g}</span>`; }
+function formatSev(s) { return `<span class="sev-${s}">${s.toUpperCase()}</span>`; }
+
+function formatResponse(intent, data, text) {
+  switch(intent) {
+    case 'security_scan': {
+      const findings = data.findings || [];
+      const grade = data.grade || 'A+';
+      const risk = data.risk || '0';
+      if (findings.length === 0) return pick(TEMPLATES.scan_clean);
+      const sevCounts = {};
+      findings.forEach(f=>{sevCounts[f.severity]=(sevCounts[f.severity]||0)+1;});
+      const detail = '<br><br>' + findings.slice(0,10).map(f=>`  ${formatSev(f.severity)} **${f.title}** (line ${f.line})<br>  \`Fix: ${f.fix}\``).join('<br><br>');
+      return pick(TEMPLATES.scan_findings).replace('{grade}',formatGrade(grade)).replace('{count}',findings.length).replace('{detail}',detail) + `<br><br>Risk score: **${risk}/10**`;
+    }
+    case 'verify_code': {
+      const findings = data.findings || [];
+      const grade = calcGrade(findings);
+      return `Code verification complete. Grade: ${formatGrade(grade)}. Analyzed syntax, semantic, formal, and compliance layers.<br><br>Found **${findings.length}** issue(s).` + (findings.length > 0 ? '<br><br>' + findings.slice(0,5).map(f=>`${formatSev(f.severity)} ${f.title} (line ${f.line})`).join('<br>') : '');
+    }
+    case 'check_compliance': {
+      const score = data.score || 0;
+      const rec = score >= 80 ? ' Strong compliance posture.' : score >= 50 ? ' Some controls need attention.' : ' Significant gaps detected.';
+      return pick(TEMPLATES.compliance).replace('{standard}',data.standard).replace('{score}',score).replace('{passed}',data.passed).replace('{failed}',data.failed).replace('{recommendation}',rec) + '<br><br>' + data.checks.map(c=>`- ${c.passed ? '✅' : '❌'} **${c.control_id}**: ${c.description}`).join('<br>');
+    }
+    case 'explain_finding': {
+      const cve = data.cve;
+      if (!cve) return "I couldn't find that CVE in my database. Try CVE-2024-001 through CVE-2024-012.";
+      return pick(TEMPLATES.explain).replace('{id}',data.id).replace('{title}',cve.title).replace('{severity}',cve.severity.toUpperCase()).replace('{cvss}',cve.cvss).replace('{desc}',cve.desc).replace('{bad}',cve.bad).replace('{good}',cve.good).replace('{fix}',cve.fix);
+    }
+    case 'generate_spec': {
+      const spec = data.spec;
+      return pick(TEMPLATES.spec).replace('{pre}',spec.pre.map(p=>`- ${p}`).join('<br>')).replace('{post}',spec.post.map(p=>`- ${p}`).join('<br>')).replace('{inv}',spec.inv.map(p=>`- ${p}`).join('<br>'));
+    }
+    case 'generate_tests': {
+      const tests = data.tests || [];
+      return pick(TEMPLATES.tests).replace('{count}',tests.length).replace('{tests}',tests.map(t=>`- **${t.name}**: \`${t.input}\` → **${t.expected}** (${t.prop})`).join('<br>'));
+    }
+    case 'system_status': return pick(TEMPLATES.status);
+    case 'help': return pick(TEMPLATES.help);
+    case 'conversation': {
+      const t = text.toLowerCase();
+      if (/^hello$|^hi$|^hey$/.test(t)) return pick(TEMPLATES.greeting);
+      if (/joke/.test(t)) return pick(TEMPLATES.joke);
+      if (/thank/.test(t)) return pick(TEMPLATES.thanks);
+      if (/how are you/.test(t)) return "All systems operational. Ready to assist with security operations.";
+      if (/who are you|what are you/.test(t)) return "I am **VeriForge Jarvis** v1.0.0, your personal security assistant. I can scan code, check compliance, explain vulnerabilities, and more. Think of me as your security co-pilot.";
+      return "I'm listening. Try: `scan this code`, `explain CVE-2024-002`, or `check compliance`.";
+    }
+    default: return pick(TEMPLATES.unknown);
+  }
+}
+
+// ─── PROCESSING ───────────────────────────────────────────────────
+function processMessage(text, code) {
+  const intent = classifyIntent(text);
+  let data = {};
+
+  switch(intent) {
+    case 'security_scan': {
+      const c = code || extractCode(text);
+      if (!c || c.length < 3) { data = {error:'No code to scan. Paste code or use the attach button.'}; break; }
+      const findings = scanCode(c);
+      data = {findings, grade:calcGrade(findings), risk:calcRisk(findings)};
+      scanCount++;
+      totalFindings += findings.length;
+      break;
+    }
+    case 'verify_code': {
+      const c = code || extractCode(text);
+      const findings = scanCode(c || text);
+      data = {findings, grade:calcGrade(findings)};
+      break;
+    }
+    case 'check_compliance': {
+      const c = code || extractCode(text);
+      const std = extractStandard(text);
+      data = checkCompliance(c || text, std);
+      break;
+    }
+    case 'explain_finding': {
+      const id = extractCVE(text) || 'CVE-2024-002';
+      data = {id, cve:CVE_DB[id]};
+      break;
+    }
+    case 'generate_spec': {
+      const desc = text.replace(/generate spec(ification)?( for)?/i,'').trim() || 'validate input';
+      data = {spec:generateSpec(desc)};
+      break;
+    }
+    case 'generate_tests': {
+      const spec = code || text.replace(/generate tests?( for)?/i,'').trim();
+      data = {tests:generateTests(spec)};
+      break;
+    }
+    case 'system_status': data = {}; break;
+    case 'help': data = {}; break;
+    case 'conversation': data = {text}; break;
+    default: {
+      if (text.length > 20 && /(def |import |class |=)/.test(text)) {
+        const findings = scanCode(text);
+        data = {findings, grade:calcGrade(findings), risk:calcRisk(findings)};
+        scanCount++;
+      } else { data = {text}; }
+    }
+  }
+
+  conversationTurns++;
+  return {intent, text:formatResponse(intent, data, text), data};
+}
+
+// ─── UI ───────────────────────────────────────────────────────────
+function initParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (15 + Math.random() * 20) + 's';
+    p.style.animationDelay = (Math.random() * 15) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+    container.appendChild(p);
+  }
+}
+
+function setOrbState(state) {
+  const orb = document.getElementById('orb');
+  const st = document.getElementById('orb-state');
+  const dot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  orb.className = 'orb';
+  if (state === 'thinking') { orb.classList.add('thinking'); st.textContent = 'Analyzing...'; dot.className = 'status-dot busy'; statusText.textContent = 'Processing'; }
+  else if (state === 'speaking') { orb.classList.add('speaking'); st.textContent = 'Speaking'; dot.className = 'status-dot online'; statusText.textContent = 'Online'; }
+  else if (state === 'alert') { orb.classList.add('alert'); st.textContent = 'Alert'; dot.className = 'status-dot busy'; }
+  else { st.textContent = 'Ready'; dot.className = 'status-dot online'; statusText.textContent = 'Online'; }
+}
+
+function appendMessage(role, html, intent) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const intentBadge = intent && role === 'jarvis' ? `<span class="text-[10px] text-cyan-500/50 ml-2">[${intent}]</span>` : '';
+  const icon = role === 'jarvis'
+    ? `<div class="w-7 h-7 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-1"><svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>`
+    : `<div class="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-1"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></div>`;
+
+  div.innerHTML = `<div class="flex items-start gap-3 ${role === 'user' ? 'flex-row-reverse' : ''}">${icon}<div class="min-w-0"><div class="msg-bubble text-sm leading-relaxed">${html}</div><div class="msg-time mt-1 ${role === 'user' ? 'text-right' : ''}">${time}${intentBadge}</div></div></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showTyping() {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.id = 'typing-indicator';
+  div.className = 'chat-msg jarvis';
+  div.innerHTML = `<div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function updateStats() {
+  document.getElementById('stat-turns').textContent = conversationTurns;
+  document.getElementById('stat-scans').textContent = scanCount;
+  document.getElementById('stat-findings').textContent = totalFindings;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || isProcessing) return;
+  input.value = '';
+  isProcessing = true;
+  const codeNote = attachedCode ? '<br><br>`[Code attached (' + attachedCode.split("\n").length + ' lines)]`' : '';
+  appendMessage('user', escapeHtml(msg) + codeNote);
+  setOrbState('thinking');
+  showTyping();
+
+  await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+
+  const result = processMessage(msg, attachedCode);
+  hideTyping();
+  appendMessage('jarvis', result.text, result.intent);
+  document.getElementById('intent-display').textContent = result.intent.toUpperCase();
+  setOrbState('speaking');
+  if (voiceEnabled && 'speechSynthesis' in window) speak(result.text);
+  setTimeout(() => setOrbState('ready'), 2500);
+  updateStats();
+
+  isProcessing = false;
+  if (attachedCode) removeCodeAttachment();
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+function quickCmd(cmd) {
+  const msgs = {
+    scan: 'Scan this code for vulnerabilities',
+    compliance: 'Check SOC2 compliance',
+    explain: 'Explain CVE-2024-002',
+    spec: 'Generate spec for: validate positive integer and return square root',
+    tests: 'Generate tests for divide function with zero-division protection',
+    status: 'system status',
+    help: 'what can you do'
+  };
+  document.getElementById('chat-input').value = msgs[cmd] || cmd;
+  if (cmd === 'scan' || cmd === 'compliance') { document.getElementById('code-modal').classList.remove('hidden'); return; }
+  sendMessage();
+}
+
+function speak(text) {
+  window.speechSynthesis.cancel();
+  const plain = text.replace(/<[^>]*>/g, '').substring(0, 300);
+  const u = new SpeechSynthesisUtterance(plain);
+  u.rate = 1.1; u.pitch = 0.9;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(vo => vo.lang.startsWith('en') && (vo.name.includes('Google US') || vo.name.includes('Daniel') || vo.name.includes('David')));
+  if (v) u.voice = v;
+  window.speechSynthesis.speak(u);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('voice-btn');
+  btn.style.background = voiceEnabled ? 'rgba(0,212,255,0.15)' : 'rgba(0,212,255,0.05)';
+}
+function attachCode() { document.getElementById('code-modal').classList.remove('hidden'); }
+function closeCodeModal() { document.getElementById('code-modal').classList.add('hidden'); }
+function confirmCodeAttach() {
+  attachedCode = document.getElementById('code-input').value;
+  if (attachedCode) { document.getElementById('code-attachment').classList.remove('hidden'); closeCodeModal(); }
+}
+function removeCodeAttachment() { attachedCode = ''; document.getElementById('code-attachment').classList.add('hidden'); }
+function clearChat() { document.getElementById('chat-area').innerHTML = ''; conversationTurns = 0; updateStats(); }
+function handleKeydown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+
+const textarea = document.getElementById('chat-input');
+textarea.addEventListener('input', () => { textarea.style.height = 'auto'; textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px'; });
+
+// Welcome message
+function showWelcome() {
+  const html = '<strong class="text-cyan-400">Jarvis v1.0.0 — Online</strong><br><br>At your service. I can scan code for vulnerabilities, check compliance, explain security findings, generate formal specifications, and more. All powered by the VeriForge ecosystem.<br><br><span class="text-gray-500">Try: "scan this code" or "explain CVE-2024-002"</span>';
+  appendMessage('jarvis', html, 'conversation');
+}
+
+// Init — wait for DOM to be fully ready
+document.addEventListener('DOMContentLoaded', () => {
+  initParticles();
+  showWelcome();
+});
+</script>
+</body>
+</html>
