@@ -41,6 +41,8 @@ REQUIRED_PYTHON_VERSION_STR = "3.10+"
 
 SDK_PACKAGE_NAME = "veriforge-sdk"
 SDK_PACKAGE_ZIP = "veriforge-sdk.zip"
+GITHUB_SDK_URL = "https://github.com/CSP7211/VeriForge/archive/refs/heads/sdk.zip"
+GITHUB_REPO_URL = "https://github.com/CSP7211/VeriForge.git"
 INSTALL_DIR = Path.home() / ".veriforge"
 LOG_FILE = INSTALL_DIR / "install.log"
 DATA_DIR = INSTALL_DIR / "data"
@@ -271,9 +273,67 @@ def install_pip(python_exe: str | None = None) -> bool:
 # SDK Installation
 # ==============================================================================
 
+def _pip_install(target: str, description: str) -> bool:
+    """Run pip install and return success status."""
+    log.info(f"{description}...")
+    cmd = [sys.executable, "-m", "pip", "install", target]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if result.returncode != 0:
+        log.error(f"pip install failed:\n{result.stderr}")
+        return False
+    return True
+
+
+def _download_from_github(temp_dir: Path) -> Path | None:
+    """Download SDK ZIP from GitHub sdk branch."""
+    log.info("Downloading from GitHub (sdk branch)...")
+    log.progress(10, "Downloading from GitHub...")
+    zip_path = temp_dir / "veriforge-sdk-github.zip"
+    try:
+        urllib.request.urlretrieve(GITHUB_SDK_URL, zip_path)
+        log.progress(30, "Download complete, extracting...")
+        import zipfile
+        extract_dir = temp_dir / "veriforge-sdk-extracted"
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(extract_dir)
+        # Find the sdk subfolder
+        sdk_subdirs = [d for d in extract_dir.iterdir() if d.is_dir()]
+        if sdk_subdirs:
+            sdk_dir = sdk_subdirs[0] / "veriforge-sdk" if (sdk_subdirs[0] / "veriforge-sdk").exists() else sdk_subdirs[0]
+            return sdk_dir
+        return None
+    except Exception as e:
+        log.error(f"GitHub download failed: {e}")
+        return None
+
+
+def _clone_from_github(temp_dir: Path) -> Path | None:
+    """Clone repo from GitHub and return sdk directory."""
+    log.info("Cloning from GitHub...")
+    log.progress(10, "Cloning repository...")
+    clone_dir = temp_dir / "VeriForge"
+    try:
+        result = subprocess.run(
+            ["git", "clone", "--branch", "sdk", "--single-branch", "--depth", "1",
+             GITHUB_REPO_URL, str(clone_dir)],
+            capture_output=True, text=True, timeout=120,
+        )
+        if result.returncode == 0 and (clone_dir / "veriforge-sdk").exists():
+            return clone_dir / "veriforge-sdk"
+        return None
+    except Exception as e:
+        log.error(f"Git clone failed: {e}")
+        return None
+
+
 def install_sdk(sdk_path: str | None = None, silent: bool = False) -> bool:
     """
     Install the VeriForge SDK package.
+
+    Tries in order:
+        1. Local ZIP file (--sdk-path or bundled veriforge-sdk.zip)
+        2. GitHub sdk branch (download ZIP)
+        3. GitHub sdk branch (git clone)
 
     Args:
         sdk_path: Optional local path to SDK ZIP file
@@ -287,45 +347,57 @@ def install_sdk(sdk_path: str | None = None, silent: bool = False) -> bool:
             log.error("Cannot install SDK without pip. Please install pip manually.")
             return False
 
-    try:
-        if sdk_path and os.path.isfile(sdk_path):
-            log.info(f"Installing from local file: {sdk_path}")
-            log.progress(10, "Reading local package...")
-            cmd = [sys.executable, "-m", "pip", "install", sdk_path, "--upgrade"]
-        else:
-            log.info(f"Installing {SDK_PACKAGE_NAME} from PyPI...")
-            log.progress(10, "Downloading from PyPI...")
-            cmd = [sys.executable, "-m", "pip", "install", SDK_PACKAGE_NAME, "--upgrade"]
+    import tempfile
+    temp_dir = Path(tempfile.mkdtemp(prefix="veriforge_install_"))
 
-        log.progress(30, "Installing package...")
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
+    # ── Attempt 1: Local ZIP ──
+    local_zip = None
+    if sdk_path and os.path.isfile(sdk_path):
+        local_zip = Path(sdk_path)
+    elif Path(SDK_PACKAGE_ZIP).exists():
+        local_zip = Path(SDK_PACKAGE_ZIP)
+    elif (Path(__file__).parent / SDK_PACKAGE_ZIP).exists():
+        local_zip = Path(__file__).parent / SDK_PACKAGE_ZIP
 
-        if result.returncode != 0:
-            log.error(f"pip install failed:\n{result.stderr}")
-            # Fallback: try without --upgrade
-            log.info("Retrying without --upgrade flag...")
-            cmd.pop(-2)  # Remove --upgrade
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            if result.returncode != 0:
-                log.error(f"Retry failed:\n{result.stderr}")
-                return False
+    if local_zip:
+        log.info(f"Installing from local ZIP: {local_zip}")
+        log.progress(10, "Extracting local package...")
+        import zipfile
+        extract_dir = temp_dir / "local-sdk"
+        with zipfile.ZipFile(local_zip, 'r') as zf:
+            zf.extractall(extract_dir)
+        sdk_dirs = list(extract_dir.rglob("setup.py"))
+        if sdk_dirs:
+            sdk_dir = sdk_dirs[0].parent
+            log.progress(40, "Installing from extracted source...")
+            if _pip_install(str(sdk_dir), "Installing from local source"):
+                log.progress(100, "SDK installed!")
+                log.success("VeriForge SDK installed from local ZIP")
+                return True
 
-        log.progress(100, "SDK installed!")
-        log.success("VeriForge SDK installed successfully")
-        return True
+    # ── Attempt 2: Download from GitHub ──
+    log.info("Local ZIP not found. Trying GitHub...")
+    github_sdk = _download_from_github(temp_dir)
+    if github_sdk:
+        log.progress(50, "Installing from GitHub download...")
+        if _pip_install(str(github_sdk), "Installing from GitHub"):
+            log.progress(100, "SDK installed!")
+            log.success("VeriForge SDK installed from GitHub")
+            return True
 
-    except subprocess.TimeoutExpired:
-        log.error("SDK installation timed out (5 minutes). Check your internet connection.")
-        return False
-    except Exception as e:
-        log.error(f"SDK installation failed: {e}")
-        traceback.print_exc()
-        return False
+    # ── Attempt 3: Clone from GitHub ──
+    log.info("Download failed. Trying git clone...")
+    cloned_sdk = _clone_from_github(temp_dir)
+    if cloned_sdk:
+        log.progress(60, "Installing from cloned repository...")
+        if _pip_install(str(cloned_sdk), "Installing from git clone"):
+            log.progress(100, "SDK installed!")
+            log.success("VeriForge SDK installed from git clone")
+            return True
+
+    log.error("All SDK installation methods failed.")
+    log.info("Please manually install: git clone https://github.com/CSP7211/VeriForge.git")
+    return False
 
 
 # ==============================================================================
@@ -447,22 +519,28 @@ def create_shortcut(
         shortcut.save()
     except ImportError:
         # Fallback: use PowerShell to create shortcut
+        # Escape backslashes and quotes for PowerShell safety
+        def _esc(s: str) -> str:
+            return s.replace('\\', '\\\\').replace('"', '\\"')
+
         ps_script = f"""
 $WshShell = New-Object -ComObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
-$Shortcut.TargetPath = "{target}"
-$Shortcut.Arguments = "{arguments}"
-$Shortcut.Description = "{description}"
-$Shortcut.WorkingDirectory = "{Path.home()}"
-$Shortcut.IconLocation = "{target},{icon_index}"
+$Shortcut = $WshShell.CreateShortcut("{_esc(str(shortcut_path))}")
+$Shortcut.TargetPath = "{_esc(target)}"
+$Shortcut.Arguments = "{_esc(arguments)}"
+$Shortcut.Description = "{_esc(description)}"
+$Shortcut.WorkingDirectory = "{_esc(str(Path.home()))}"
+$Shortcut.IconLocation = "{_esc(target)},{icon_index}"
 $Shortcut.Save()
 """
-        subprocess.run(
+        result = subprocess.run(
             ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
             capture_output=True,
-            check=True,
+            text=True,
             timeout=30,
         )
+        if result.returncode != 0:
+            raise RuntimeError(f"PowerShell shortcut creation failed: {result.stderr}")
 
 
 # ==============================================================================
