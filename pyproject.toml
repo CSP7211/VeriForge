@@ -3,53 +3,72 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "veriforge"
-version = "0.4.0-hardened"
-description = "Hardened formal verification platform"
+name = "veriforge-sdk"
+version = "1.0.0"
+description = "Unified Developer Kit for the VeriForge security platform"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.10"
-dependencies = ["jinja2>=3.1.0", "cryptography>=42.0.0"]
+authors = [
+    {name = "VeriForge Engineering", email = "sdk@veriforge.io"},
+]
+keywords = [
+    "security", "scanning", "compliance", "testing", "dsl",
+    "consensus", "sandbox", "sdk", "veriforge",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+requires-python = ">=3.9"
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
-    "black>=24.0",
-    "mypy>=1.10",
-    "bandit[toml]>=1.7",
-    "pytest-cov>=5.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.7.0",
+    "mypy>=1.5.0",
+    "build>=0.10.0",
 ]
 
-[project.scripts]
-veriforge = "veriforge.__main__:main"
+[project.urls]
+Homepage = "https://github.com/veriforge/veriforge-sdk"
+Documentation = "https://docs.veriforge.io/sdk"
+Repository = "https://github.com/veriforge/veriforge-sdk.git"
+Issues = "https://github.com/veriforge/veriforge-sdk/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["veriforge_sdk*"]
+
+[tool.setuptools.package-data]
+veriforge_sdk = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ["py310", "py311", "py312"]
+target-version = ['py39']
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.9"
 warn_return_any = true
+warn_unused_configs = true
 disallow_untyped_defs = true
-
-[tool.bandit]
-exclude_dirs = ["tests"]
+disallow_incomplete_defs = true
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--strict-markers -v"
-
-[tool.coverage.run]
-source = ["veriforge"]
-omit = ["*/__main__.py", "*/tests/*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if __name__ == .__main__.:",
-    "raise NotImplementedError",
-    "if TYPE_CHECKING:",
-]
+addopts = "-ra --strict-markers"
