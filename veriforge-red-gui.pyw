@@ -580,6 +580,25 @@ class VeriForgeScannerApp:
             val_label.pack(side=tk.LEFT, padx=(0, 15))
             self.stat_labels[key] = val_label
 
+        # Fix toolbar (appears when finding selected)
+        self.fix_frame = tk.Frame(frame, bg=COLORS["bg_dark"], height=36)
+        self.fix_frame.pack(fill=tk.X, pady=(0, 5))
+        self.fix_frame.pack_propagate(False)
+
+        self.fix_label = tk.Label(self.fix_frame, text="Select a finding to see fix options",
+                                   font=("Consolas", 9), fg=COLORS["text_secondary"], bg=COLORS["bg_dark"])
+        self.fix_label.pack(side=tk.LEFT, padx=10)
+
+        self.fix_show_btn = tk.Button(self.fix_frame, text="🔍 Show Fix", command=self._on_show_fix_btn,
+                                       font=("Consolas", 9, "bold"), bg=COLORS["accent_green"], fg="white",
+                                       relief=tk.FLAT, cursor="hand2", state=tk.DISABLED)
+        self.fix_show_btn.pack(side=tk.RIGHT, padx=(0, 5))
+
+        self.fix_apply_btn = tk.Button(self.fix_frame, text="🔧 Apply Fix", command=self._on_apply_fix_btn,
+                                        font=("Consolas", 9, "bold"), bg=COLORS["accent_red"], fg="white",
+                                        relief=tk.FLAT, cursor="hand2", state=tk.DISABLED)
+        self.fix_apply_btn.pack(side=tk.RIGHT, padx=(0, 5))
+
         # Notebook with tabs
         self.notebook = ttk.Notebook(frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -896,6 +915,9 @@ class VeriForgeScannerApp:
         """Handle finding selection in the table."""
         selection = self.tree.selection()
         if not selection:
+            self.fix_label.config(text="Select a finding to see fix options")
+            self.fix_show_btn.config(state=tk.DISABLED)
+            self.fix_apply_btn.config(state=tk.DISABLED)
             return
 
         item = selection[0]
@@ -912,12 +934,111 @@ class VeriForgeScannerApp:
                 finding = f
                 break
 
-        self._show_finding_details(finding or {"severity": severity, "title": title, "file": file_path, "line": line, "product": product})
+        finding_data = finding or {"severity": severity, "title": title, "file": file_path, "line": line, "product": product}
+        self._show_finding_details(finding_data)
+
+        # Update fix toolbar
+        fix = self._get_fix(title)
+        if fix:
+            self.fix_label.config(text=f"🔧 Fix available: {title[:50]}", fg=COLORS["accent_green"])
+            self.fix_show_btn.config(state=tk.NORMAL)
+            self.fix_apply_btn.config(state=tk.NORMAL)
+        else:
+            self.fix_label.config(text=f"ℹ️  No auto-fix for: {title[:50]}", fg=COLORS["text_secondary"])
+            self.fix_show_btn.config(state=tk.DISABLED)
+            self.fix_apply_btn.config(state=tk.DISABLED)
 
     def _on_finding_double_click(self, event: tk.Event | None = None) -> None:
         """Handle double-click on a finding."""
         self._on_finding_select()
         self.notebook.select(self.details_frame)
+
+    def _on_show_fix_btn(self) -> None:
+        """Show Fix button clicked — display fix in Details tab."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        values = self.tree.item(selection[0], "values")
+        if not values:
+            return
+        self._show_fix_for_item(values[1])  # values[1] = title
+
+    def _on_apply_fix_btn(self) -> None:
+        """Apply Fix button clicked — attempt to fix the file."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        values = self.tree.item(selection[0], "values")
+        if not values:
+            return
+        title, file_path = values[1], values[2]
+        fix = self._get_fix(title)
+        if not fix:
+            return
+
+        import tkinter.messagebox as msgbox
+        if not msgbox.askyesno("Confirm Fix", f"Apply fix to:\n{file_path}\n\nA .backup file will be created.\n\nProceed?"):
+            return
+
+        result = self._apply_fix_to_file(file_path, title)
+        if result:
+            msgbox.showinfo("Fix Applied", f"✅ Fix applied successfully!\n\nBackup: {result}")
+            self._log_console(f"Fixed: {title} in {file_path}", "success")
+        else:
+            msgbox.showerror("Fix Failed", "❌ Could not apply fix.\n\nThe file may not exist or is not writable.")
+            self._log_console(f"Fix failed: {title} in {file_path}", "error")
+
+    def _apply_fix_to_file(self, file_path: str, title: str) -> str | None:
+        """Apply an auto-fix to a file. Returns backup path or None."""
+        import os
+        path = Path(file_path)
+        if not path.exists():
+            return None
+
+        try:
+            content = path.read_text(encoding="utf-8")
+            original = content
+            fix = self._get_fix(title)
+            if not fix:
+                return None
+
+            applied = False
+
+            # Apply pattern-based replacements
+            if "eval" in title.lower():
+                content = content.replace("eval(", "ast.literal_eval(")
+                applied = True
+            if "pickle" in title.lower():
+                content = content.replace("pickle.load(", "json.load(")
+                applied = True
+            if "yaml" in title.lower() and "safe" not in title.lower():
+                content = content.replace("yaml.load(", "yaml.safe_load(")
+                applied = True
+            if "shell" in title.lower():
+                content = content.replace("shell=True", "shell=False")
+                applied = True
+            if "Debug" in title:
+                content = content.replace("DEBUG = True", "DEBUG = False")
+                content = content.replace("DEBUG=True", "DEBUG=False")
+                applied = True
+            if "http://" in title.lower():
+                content = content.replace("http://", "https://")
+                applied = True
+
+            if not applied:
+                return None
+
+            # Create backup
+            backup = str(path) + ".veriforge.backup"
+            Path(backup).write_text(original, encoding="utf-8")
+
+            # Write fixed content
+            path.write_text(content, encoding="utf-8")
+            return backup
+
+        except Exception as e:
+            self._log_console(f"Fix error: {e}", "error")
+            return None
 
     def _show_finding_details(self, finding: dict) -> None:
         """Show detailed information about a finding."""
