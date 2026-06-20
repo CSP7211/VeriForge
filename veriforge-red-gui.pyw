@@ -946,12 +946,131 @@ class VeriForgeScannerApp:
         self.details_text.insert(tk.END, f"  This finding was detected by the {finding.get('product', 'unknown')} scanner. "
                                           f"Review the affected file and apply appropriate remediation.\n\n")
 
-        self.details_text.insert(tk.END, "Remediation:\n", "label")
-        self.details_text.insert(tk.END, "  1. Review the affected code location\n")
-        self.details_text.insert(tk.END, "  2. Apply the recommended fix\n")
-        self.details_text.insert(tk.END, "  3. Re-run the scanner to verify\n")
+        # Show fix if available
+        fix = self._get_fix(finding.get("title", ""))
+        if fix:
+            self.details_text.insert(tk.END, "\n⚡ AUTO-FIX AVAILABLE\n", "header")
+            self.details_text.insert(tk.END, "-" * 40 + "\n")
+            self.details_text.insert(tk.END, "Risk: ", "label")
+            self.details_text.insert(tk.END, f"{fix['risk']}\n\n")
+            self.details_text.insert(tk.END, "Quick Fix:\n", "label")
+            for line in fix["fix"].split("\n")[:8]:  # Show first 8 lines
+                self.details_text.insert(tk.END, line + "\n", "code")
+            self.details_text.insert(tk.END, "\n  Right-click finding → 'Show Fix' for full details\n")
+            self.details_text.insert(tk.END, f"  CWE: {fix['cwe']}  |  ")
+            self.details_text.insert(tk.END, f"https://cwe.mitre.org/data/definitions/{fix['cwe'].split('-')[1]}.html\n")
+        else:
+            self.details_text.insert(tk.END, "Remediation:\n", "label")
+            self.details_text.insert(tk.END, "  1. Review the affected code location\n")
+            self.details_text.insert(tk.END, "  2. Apply the recommended fix\n")
+            self.details_text.insert(tk.END, "  3. Re-run the scanner to verify\n")
 
         self.details_text.config(state=tk.DISABLED)
+
+    # ------------------------------------------------------------------
+    # Fix Database — maps finding types to remediation code
+    # ------------------------------------------------------------------
+    FIXES = {
+        "Dynamic Code Execution": {
+            "risk": "eval()/exec() can execute arbitrary code from untrusted input.",
+            "fix": "Replace eval() with ast.literal_eval() for safe parsing:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  result = eval(user_input)\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  import ast\n"
+                   "  result = ast.literal_eval(user_input)",
+            "cwe": "CWE-95",
+        },
+        "Hardcoded Password": {
+            "risk": "Passwords in source code can be leaked via version control.",
+            "fix": "Move passwords to environment variables:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  PASSWORD = 'mysecret123'\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  import os\n"
+                   "  PASSWORD = os.environ.get('APP_PASSWORD')\n"
+                   "  if not PASSWORD:\n"
+                   "      raise ValueError('APP_PASSWORD not set')",
+            "cwe": "CWE-798",
+        },
+        "Hardcoded Secret": {
+            "risk": "API keys/tokens in code can be stolen and abused.",
+            "fix": "Use environment variables or a secrets manager:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  API_KEY = 'sk-abc123xyz'\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  import os\n"
+                   "  API_KEY = os.environ.get('API_KEY')\n"
+                   "  # Or use: python-dotenv for .env files",
+            "cwe": "CWE-798",
+        },
+        "Potential SQL Injection": {
+            "risk": "Attackers can inject malicious SQL via string formatting.",
+            "fix": "Always use parameterized queries:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  cursor.execute(f\"SELECT * FROM users WHERE id = {user_id}\")\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  cursor.execute(\n"
+                   "      'SELECT * FROM users WHERE id = %s',\n"
+                   "      (user_id,)\n"
+                   "  )",
+            "cwe": "CWE-89",
+        },
+        "Unsafe Deserialization": {
+            "risk": "pickle.load() can execute arbitrary code during deserialization.",
+            "fix": "Use JSON instead of pickle for untrusted data:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  import pickle\n"
+                   "  data = pickle.load(file)\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  import json\n"
+                   "  data = json.load(file)",
+            "cwe": "CWE-502",
+        },
+        "Shell Injection via subprocess": {
+            "risk": "shell=True with user input allows command injection.",
+            "fix": "Never use shell=True with user input:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  subprocess.run(f'ping {host}', shell=True)\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  subprocess.run(['ping', host], shell=False)",
+            "cwe": "CWE-78",
+        },
+        "Unsafe YAML Loading": {
+            "risk": "yaml.load() without Loader can execute arbitrary code.",
+            "fix": "Always use yaml.safe_load():\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  data = yaml.load(file)\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  data = yaml.safe_load(file)",
+            "cwe": "CWE-502",
+        },
+        "Debug Mode Enabled": {
+            "risk": "DEBUG=True exposes stack traces and sensitive info.",
+            "fix": "Set DEBUG=False in production:\n\n"
+                   "  # BEFORE (DANGEROUS):\n"
+                   "  DEBUG = True\n\n"
+                   "  # AFTER (SAFE):\n"
+                   "  DEBUG = os.environ.get('DEBUG', 'False') == 'True'",
+            "cwe": "CWE-489",
+        },
+        "Insecure HTTP URL": {
+            "risk": "HTTP transmits data in plaintext — can be intercepted.",
+            "fix": "Replace all HTTP with HTTPS:\n\n"
+                   "  # BEFORE:\n"
+                   "  url = 'http://api.example.com/data'\n\n"
+                   "  # AFTER:\n"
+                   "  url = 'https://api.example.com/data'",
+            "cwe": "CWE-319",
+        },
+    }
+
+    def _get_fix(self, finding_title):
+        """Look up fix for a finding by title."""
+        for key, fix_data in self.FIXES.items():
+            if key.lower() in finding_title.lower():
+                return fix_data
+        return None
 
     def _show_context_menu(self, event: tk.Event) -> None:
         """Show context menu on right-click."""
@@ -964,13 +1083,55 @@ class VeriForgeScannerApp:
             self.tree.selection_set(item)
             self._on_finding_select()
 
+            values = self.tree.item(item, "values")
+            title = values[1] if len(values) > 1 else ""
+            has_fix = self._get_fix(title) is not None
+
             menu = tk.Menu(self.root, tearoff=0, bg=COLORS["bg_medium"],
                            fg=COLORS["text_primary"], activebackground=COLORS["accent_red"])
             menu.add_command(label="View Details", command=lambda: self.notebook.select(self.details_frame))
+
+            if has_fix:
+                menu.add_command(label="Show Fix", command=lambda: self._show_fix_for_item(title),
+                                foreground=COLORS["accent_green"])
+
             menu.add_separator()
             menu.add_command(label="Copy File Path", command=lambda: self.root.clipboard_append(self.tree.item(item, "values")[2]))
             menu.add_command(label="Export This Finding", command=lambda: self._export_single_finding(item))
             menu.post(event.x_root, event.y_root)
+
+    def _show_fix_for_item(self, title):
+        """Show the fix for a finding in the Details tab."""
+        fix = self._get_fix(title)
+        if not fix:
+            return
+
+        self.details_text.config(state=tk.NORMAL)
+        self.details_text.delete("1.0", tk.END)
+
+        self.details_text.insert(tk.END, "SECURITY FIX\n", "header")
+        self.details_text.insert(tk.END, "=" * 60 + "\n\n")
+
+        self.details_text.insert(tk.END, "Risk:\n", "label")
+        self.details_text.insert(tk.END, f"  {fix['risk']}\n\n")
+
+        self.details_text.insert(tk.END, "How to Fix:\n", "label")
+        for line in fix["fix"].split("\n"):
+            self.details_text.insert(tk.END, line + "\n", "code")
+        self.details_text.insert(tk.END, "\n")
+
+        self.details_text.insert(tk.END, "Reference:\n", "label")
+        self.details_text.insert(tk.END, f"  https://cwe.mitre.org/data/definitions/{fix['cwe'].split('-')[1]}.html\n\n")
+
+        self.details_text.insert(tk.END, "Steps:\n", "label")
+        self.details_text.insert(tk.END, "  1. Open the affected file\n")
+        self.details_text.insert(tk.END, "  2. Apply the fix shown above\n")
+        self.details_text.insert(tk.END, "  3. Save the file\n")
+        self.details_text.insert(tk.END, "  4. Re-run the scanner to verify\n\n")
+        self.details_text.insert(tk.END, "  A .backup file will be created automatically.\n")
+
+        self.details_text.config(state=tk.DISABLED)
+        self.notebook.select(self.details_frame)
 
     def _log_console(self, message: str, level: str = "info") -> None:
         """Add a log message to the console panel."""
