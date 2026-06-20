@@ -99,10 +99,12 @@ class StyledLabel(ttk.Label):
     def __init__(self, parent: tk.Widget, text: str = "", bold: bool = False, **kwargs: Any) -> None:
         font_size = kwargs.pop("font_size", 10)
         font_weight = "bold" if bold else "normal"
+        lbl_font = kwargs.pop("font", ("Consolas", font_size, font_weight))
+        lbl_text = kwargs.pop("text", text)
         super().__init__(
             parent,
-            text=text,
-            font=("Consolas", font_size, font_weight),
+            text=lbl_text,
+            font=lbl_font,
             foreground=COLORS["text_primary"],
             background=COLORS["bg_dark"],
             **kwargs,
@@ -120,13 +122,20 @@ class StyledButton(tk.Button):
         }
         fg, bg = self.colors.get(variant, self.colors["primary"])
 
+        # Pop values from kwargs to avoid "multiple values" error
+        btn_font = kwargs.pop("font", ("Consolas", 10, "bold"))
+        btn_text = kwargs.pop("text", text)
+        btn_cmd = kwargs.pop("command", command)
+        btn_bg = kwargs.pop("bg", bg)
+        btn_fg = kwargs.pop("fg", "white" if variant != "secondary" else COLORS["text_primary"])
+
         super().__init__(
             parent,
-            text=text,
-            command=command,
-            font=("Consolas", 10, "bold"),
-            bg=bg,
-            fg="white" if variant != "secondary" else COLORS["text_primary"],
+            text=btn_text,
+            command=btn_cmd,
+            font=btn_font,
+            bg=btn_bg,
+            fg=btn_fg,
             activebackground=fg,
             activeforeground="white",
             relief=tk.FLAT,
