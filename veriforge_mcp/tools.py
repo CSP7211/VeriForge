@@ -1011,7 +1011,7 @@ def _security_scan(params: Dict[str, Any]) -> Dict[str, Any]:
             "Use of eval() detected — arbitrary code execution risk. "
             "Use ast.literal_eval() for safe evaluation of literals, "
             "or json.loads() for JSON data."
-        ),
+        ),  # score: 25 → critical
         "exec": (
             "Use of exec() detected — arbitrary code execution risk. "
             "Refactor to avoid dynamic code execution."
@@ -1058,7 +1058,7 @@ def _security_scan(params: Dict[str, Any]) -> Dict[str, Any]:
 
     for pattern, explanation in dangerous_calls.items():
         if pattern.lower() in lowered:
-            severity_score += 8
+            severity_score += 25 if pattern == "eval" else 8
             findings.append(
                 {
                     "severity": "critical",
