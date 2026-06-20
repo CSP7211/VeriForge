@@ -99,12 +99,16 @@ class StyledLabel(ttk.Label):
     def __init__(self, parent: tk.Widget, text: str = "", bold: bool = False, **kwargs: Any) -> None:
         font_size = kwargs.pop("font_size", 10)
         font_weight = "bold" if bold else "normal"
-        lbl_font = kwargs.pop("font", ("Consolas", font_size, font_weight))
-        lbl_text = kwargs.pop("text", text)
+        # Pop ALL hardcoded values from kwargs to avoid "multiple values" error
+        kwargs.pop("text", None)
+        kwargs.pop("font", None)
+        kwargs.pop("foreground", None)
+        kwargs.pop("background", None)
+
         super().__init__(
             parent,
-            text=lbl_text,
-            font=lbl_font,
+            text=text,
+            font=("Consolas", font_size, font_weight),
             foreground=COLORS["text_primary"],
             background=COLORS["bg_dark"],
             **kwargs,
@@ -113,7 +117,7 @@ class StyledLabel(ttk.Label):
 
 class StyledButton(tk.Button):
     """A styled button with hover effects."""
-    def __init__(self, parent: tk.Widget, text: str, command: Any = None, variant: str = "primary", **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Widget, text: str = "", command: Any = None, variant: str = "primary", **kwargs: Any) -> None:
         self.variant = variant
         self.colors = {
             "primary": (COLORS["accent_red"], COLORS["accent_red"]),
@@ -122,20 +126,26 @@ class StyledButton(tk.Button):
         }
         fg, bg = self.colors.get(variant, self.colors["primary"])
 
-        # Pop values from kwargs to avoid "multiple values" error
-        btn_font = kwargs.pop("font", ("Consolas", 10, "bold"))
-        btn_text = kwargs.pop("text", text)
-        btn_cmd = kwargs.pop("command", command)
-        btn_bg = kwargs.pop("bg", bg)
-        btn_fg = kwargs.pop("fg", "white" if variant != "secondary" else COLORS["text_primary"])
+        # Pop ALL hardcoded values from kwargs to avoid "multiple values" error
+        kwargs.pop("text", None)
+        kwargs.pop("command", None)
+        kwargs.pop("font", None)
+        kwargs.pop("bg", None)
+        kwargs.pop("fg", None)
+        kwargs.pop("activebackground", None)
+        kwargs.pop("activeforeground", None)
+        kwargs.pop("relief", None)
+        kwargs.pop("cursor", None)
+        kwargs.pop("padx", None)
+        kwargs.pop("pady", None)
 
         super().__init__(
             parent,
-            text=btn_text,
-            command=btn_cmd,
-            font=btn_font,
-            bg=btn_bg,
-            fg=btn_fg,
+            text=text,
+            command=command,
+            font=("Consolas", 10, "bold"),
+            bg=bg,
+            fg="white" if variant != "secondary" else COLORS["text_primary"],
             activebackground=fg,
             activeforeground="white",
             relief=tk.FLAT,
